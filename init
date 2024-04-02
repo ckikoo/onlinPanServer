@@ -1,0 +1,5 @@
+/usr/local/nginx/sbin/nginx
+
+screen -S vue
+cd /home/vue/easypan-front
+npm run dev

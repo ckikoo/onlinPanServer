@@ -1,0 +1,130 @@
+# 运行模式(debug:调试,test:测试,release:正式)
+RunMode = "debug"
+AppName = "OnlinePan"
+# 启动时是否打印配置参数
+PrintConfig = false
+
+[HTTP]
+Host = "0.0.0.0"
+Port = 8081
+CertFile = ""
+KeyFile = ""
+ShutdownTimeOut = 30
+MaxContentLength = 67108864
+# 允许输出的最大请求日志长度
+MaxReqLoggerLength = 1024
+
+[File]
+# 默认给用户100M空间 100*1024*1024  字节 ---》 因为申请空间都是以字节为单位
+DefaultSpace = 107374182400
+FileUpload = "upload"
+
+
+[Email]
+Port = "25"
+Host = "smtp.163.com"
+UserName = "lj_5683@163.com"
+Password = "BGCFWYIIDGATRQLO"
+
+[Captcha]
+# 数字长度
+Length = 1
+# 图片宽度
+Width = 150
+# 图片高度
+Height = 30
+
+
+# TODO 
+# 请求频率限制
+[RateLimiter]
+# 是否启用
+Enable = false
+# 每分钟每个用户允许的最大请求数量
+Count = 100
+# redis数据库(如果存储方式是redis，则指定存储的数据库)
+RedisDB = 10
+
+
+[Redis]
+Addr = "ljcctv.bf:23561"
+# 哨兵地址
+# Addr = ["192.168.49.141:26379", "192.18.49.142:26379", "192.168.49.143:26379"]
+# 主节点名称
+# MasterName = "mymaster"
+# 密码
+Password = "U2FsdGVkX1sc"
+
+
+[JWTAuth]
+# 是否启用
+Enable = true
+# 签名方式(支持：HS512/HS384/HS512)
+SigningMethod = "HS512"
+# 签名key
+SigningKey = "NetCloud"
+# 过期时间（单位秒）
+Expired = 86400
+# 存储(支持：file/redis)
+Store = "redis"
+# 文件路径
+FilePath = "data/jwt_auth.db"
+# redis 数据库(如果存储方式是redis，则指定存储的数据库)
+RedisDB = 10
+# 存储到 redis 数据库中的键名前缀
+RedisPrefix = "auth_"
+
+[Gorm]
+# 是否开启调试模式
+Debug = false
+# 数据库类型(目前支持的数据库类型：mysql/sqlite3/postgres)
+DBType = "mysql"
+# 设置连接可以重用的最长时间(单位：秒)
+MaxLifetime = 43200
+# 设置数据库的最大打开连接数
+MaxOpenConns = 150
+# 设置空闲连接池中的最大连接数
+MaxIdleConns = 50
+# 数据库表名前缀
+TablePrefix = "tb_"
+# 是否启用自动映射数据库表结构
+EnableAutoMigrate = true
+
+[OSS]
+Host = ""
+key = ""
+password = ""
+
+
+[MySQL]
+# 连接地址
+Host = "ljcctv.bf"
+# 连接端口
+Port = 23560
+# 用户名
+User = "root"
+# 密码
+Password = "U2FsdGVkX1sc"
+# 数据库
+DBName = "NetCloud"
+# 连接参数
+Parameters = "charset=utf8mb4&parseTime=True&loc=Local&allowNativePasswords=true"
+
+[CORS]
+Enable = false
+AllowOrigins = ["*"]
+AllowMethods = ["GET", "POST", "PUT", "DELETE", "PATCH"]
+# 允许客户端与跨域请求一起使用的非简单标头的列表
+AllowHeaders = []
+# 请求是否可以包含cookie，HTTP身份验证或客户端SSL证书等用户凭据
+AllowCredentials = true
+# 可以缓存预检请求结果的时间（以秒为单位）
+MaxAge = 7200
+
+[GZIP]
+# 是否启用
+Enable = true
+# 排除的文件扩展名
+ExcludedExtentions = [".png", ".gif", ".jpeg", ".jpg"]
+# 排除的请求路径
+ExcludedPaths = []
