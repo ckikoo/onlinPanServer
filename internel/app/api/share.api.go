@@ -1,11 +1,9 @@
 package api
 
 import (
-	"fmt"
 	"onlineCLoud/internel/app/dao/share"
 	"onlineCLoud/internel/app/define"
 	"onlineCLoud/internel/app/ginx"
-	"onlineCLoud/internel/app/schema"
 	"onlineCLoud/internel/app/service"
 	"onlineCLoud/pkg/contextx"
 	"onlineCLoud/pkg/util/random"
@@ -31,6 +29,10 @@ func (s *ShareApi) LoadShareList(c *gin.Context) {
 		pageSize = "20"
 	}
 	PageNo, err := strconv.ParseInt(pageNo, 10, 64)
+	if err != nil {
+		ginx.ResFail(c)
+		return
+	}
 	PageSize, err := strconv.ParseInt(pageSize, 10, 64)
 
 	if err != nil {
@@ -64,7 +66,7 @@ func (s *ShareApi) ShareFile(c *gin.Context) {
 	share.ValidType = int8(validtype)
 	share.ShareTime = time.Now().Format("2006-01-02 15:04:05")
 	if validtype != define.FileShareForverDay {
-		AddDay := 24 * define.GetDay(int8(validtype))
+		AddDay := 24 * define.GetShareDay(int8(validtype))
 		share.ExpireTime = time.Now().Add(time.Hour * time.Duration(AddDay)).Format("2006-01-02 15:04:05")
 	}
 
@@ -98,85 +100,4 @@ func (s *ShareApi) CancelShare(c *gin.Context) {
 	}
 
 	ginx.ResOk(c)
-}
-
-func (api *ShareApi) GetShareLoginInfo(c *gin.Context) {
-	ctx := c.Request.Context()
-
-	shareId := c.PostForm("shareId")
-
-	info, err := api.ShareSrv.GetShareLoginInfo(ctx, shareId)
-	if err != nil {
-		ginx.ResFail(c)
-		return
-	}
-
-	ginx.ResOkWithData(c, info)
-}
-func (api *ShareApi) GetShareInfo(c *gin.Context) {
-	ctx := c.Request.Context()
-
-	shareId := c.PostForm("shareId")
-
-	info, err := api.ShareSrv.GetShareInfo(ctx, shareId)
-	if err != nil {
-		ginx.ResFail(c)
-		return
-	}
-
-	ginx.ResOkWithData(c, info)
-}
-
-func (api *ShareApi) LoadFileList(c *gin.Context) {
-	ctx := c.Request.Context()
-
-	item := new(schema.RequestShareListPage)
-	if err := ginx.ParseForm(c, item); err != nil {
-		ginx.ResFailWithMessage(c, err.Error())
-		return
-	}
-
-	fmt.Println(item)
-	info, err := api.ShareSrv.GetShareList(ctx, item)
-	if err != nil {
-		ginx.ResFail(c)
-		return
-	}
-
-	ginx.ResOkWithData(c, info)
-}
-
-func (api *ShareApi) GetFolderInfo(c *gin.Context) {
-	ctx := c.Request.Context()
-
-	shareId := c.PostForm("shareId")
-	path := c.PostForm("path")
-
-	info, err := api.ShareSrv.GetFolderInfo(ctx, shareId, path)
-	if err != nil {
-		ginx.ResFail(c)
-		return
-	}
-
-	ginx.ResOkWithData(c, info)
-}
-
-func (api *ShareApi) CheckShareCode(c *gin.Context) {
-	ctx := c.Request.Context()
-
-	shareId := c.PostForm("shareId")
-	code := c.PostForm("code")
-
-	info, err := api.ShareSrv.CheckShareCode(ctx, shareId, code)
-	if err != nil {
-		ginx.ResFail(c)
-		return
-	}
-
-	if info == true {
-		ginx.ResOk(c)
-	} else {
-		ginx.ResFailWithMessage(c, "验证码错误")
-	}
-
 }

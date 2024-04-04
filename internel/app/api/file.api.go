@@ -48,14 +48,12 @@ func (f *FileApi) GetFileList(c *gin.Context) {
 func (f *FileApi) UploadFile(c *gin.Context) {
 	ctx := c.Request.Context()
 	var item schema.FileUpload
-	fmt.Println("debug---------------????")
 	if err := ginx.ParseForm(c, &item); err != nil {
 
 		ginx.ResFailWithMessage(c, "数据格式有误")
 		return
 	}
 
-	fmt.Printf("item: %v\n", item)
 	op, err := f.FileSrv.UploadFile(c, contextx.FromUserID(ctx), item)
 	if err != nil {
 		ginx.ResFailWithMessage(c, "上传失败")
@@ -69,8 +67,6 @@ func (f *FileApi) CancelUpload(c *gin.Context) {
 	ctx := c.Request.Context()
 	fileId := c.PostForm("fileId")
 	m := make(map[string]interface{}, 0)
-
-	fmt.Println("debug")
 
 	err := os.RemoveAll(fmt.Sprintf("temp/%v/%v/%v", time.Now().Month(), contextx.FromUserID(ctx), fileId))
 	if err != nil {
@@ -225,7 +221,7 @@ func (f *FileApi) ChangeFileFolder(c *gin.Context) {
 		ginx.ResFail(c)
 	}
 	fmt.Println(filePid)
-	_, err := f.FileSrv.ChangeFileFolder(ctx, contextx.FromUserID(ctx), fileIds, filePid)
+	err := f.FileSrv.ChangeFileFolder(ctx, contextx.FromUserID(ctx), fileIds, filePid)
 	if err != nil {
 		panic(err)
 		return

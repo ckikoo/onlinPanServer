@@ -290,7 +290,7 @@ func (f *FileSrv) NewFoloder(ctx context.Context, uid string, filePid, fileName 
 	return &file, nil
 }
 
-func (f *FileSrv) findAllSubFolderFileList(ctx context.Context, fileIdList *[]string, userID, fileID string, delflag int8) {
+func (f *FileSrv) findAllSubFolderFileIdList(ctx context.Context, fileIdList *[]string, userID, fileID string, delflag int8) {
 	*fileIdList = append(*fileIdList, fileID)
 
 	query := schema.RequestFileListPage{
@@ -306,10 +306,9 @@ func (f *FileSrv) findAllSubFolderFileList(ctx context.Context, fileIdList *[]st
 	}
 
 	for _, v := range fields {
-		f.findAllSubFolderFileList(ctx, fileIdList, userID, v.FileID, delflag)
+		f.findAllSubFolderFileIdList(ctx, fileIdList, userID, v.FileID, delflag)
 	}
 
-	fmt.Printf("level fileIdList: %v\n", fileIdList)
 }
 
 func (f *FileSrv) DelFiles(ctx context.Context, uid string, fileId string) error {
@@ -328,7 +327,7 @@ func (f *FileSrv) DelFiles(ctx context.Context, uid string, fileId string) error
 	//TODO fix
 
 	for _, e := range fileInfoList {
-		f.findAllSubFolderFileList(ctx, &delFileList, uid, e.FileID, define.FileFlagInUse)
+		f.findAllSubFolderFileIdList(ctx, &delFileList, uid, e.FileID, define.FileFlagInUse)
 	}
 
 	// 暂时移除下面的子目录
@@ -426,17 +425,14 @@ func (f *FileSrv) GetFile(ctx context.Context, fid string, uid string) ([]byte, 
 
 func (f *FileSrv) GetFolderInfo(ctx context.Context, path string, uid string) ([]file.File, error) {
 	paths := strings.Split(path, "/")
-	fmt.Printf("path=========: %v\n", path)
 	var item schema.RequestFileListPage
 	item.Path = paths
 	item.FolderType = 1
 	item.DelFlag = define.FileFlagInUse
-	fmt.Printf("item: %v\n", item)
 	res, err := f.Repo.GetFileList(ctx, uid, &item, false)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("item: %v\n", res)
 	return res, nil
 
 }
@@ -497,15 +493,16 @@ func (f *FileSrv) LoadAllFolder(ctx context.Context, uid string, filePid string,
 	res, err := f.Repo.GetFileList(ctx, uid, &item, false)
 	return res, err
 }
-func (f *FileSrv) ChangeFileFolder(ctx context.Context, uid string, fileIds string, filePid string) ([]file.File, error) {
+
+func (f *FileSrv) ChangeFileFolder(ctx context.Context, uid string, fileIds string, filePid string) error {
 
 	if strings.Contains(fileIds, filePid) {
-		return nil, errors.New("")
+		return errors.New("")
 	}
 	if filePid != "0" { //判定父文件夹是否存在
 		file, err := f.Repo.GetFileInfo(ctx, filePid, uid)
 		if err != nil || file == nil || file.Status != define.FileStatusUsing {
-			return nil, errors.New("error") // TODO wait fix
+			return errors.New("error") // TODO wait fix
 		}
 	}
 
@@ -515,7 +512,7 @@ func (f *FileSrv) ChangeFileFolder(ctx context.Context, uid string, fileIds stri
 	lists, err := f.Repo.GetFileList(ctx, uid, &item, false) // 找新文件夹下的子文件
 	if err != nil {
 		log.Println("ChangeFileFolder GetFileList error", err)
-		return nil, errors.New("error") // TODO wait fix
+		return errors.New("error") // TODO wait fix
 	}
 
 	fileNameMap := make(map[string]file.File, 0)
@@ -526,7 +523,7 @@ func (f *FileSrv) ChangeFileFolder(ctx context.Context, uid string, fileIds stri
 	item = schema.RequestFileListPage{}
 	curs := strings.Split(fileIds, ",")
 	item.Path = curs
-	lists, err = f.Repo.GetFileList(ctx, uid, &item, false) // 找要被移动的文件
+	lists, _ = f.Repo.GetFileList(ctx, uid, &item, false) // 找要被移动的文件
 
 	for _, ele := range lists {
 		if _, ok := fileNameMap[ele.FileName]; ok {
@@ -534,8 +531,117 @@ func (f *FileSrv) ChangeFileFolder(ctx context.Context, uid string, fileIds stri
 			ele.FileName = fileNewName
 		}
 		ele.FilePid = filePid
-		f.Repo.UpdateFile(ctx, &ele)
+		if err := f.Repo.UpdateFile(ctx, &ele); err != nil {
+			return err
+		}
 	}
 
-	return nil, nil
+	return nil
+}
+
+// TODO
+func (f *FileSrv) CheckFootFilePid(ctx context.Context, rootFilePid, userId, fileId string) error {
+	if len(fileId) == 0 {
+		return errors.New("")
+	}
+	if rootFilePid == fileId {
+		return nil
+	}
+
+	return f.checkFilePid(ctx, rootFilePid, userId, fileId)
+
+}
+
+func (f *FileSrv) checkFilePid(ctx context.Context, rootFilePid, userId, fileId string) error {
+	fileInfo, err := f.Repo.GetFileInfo(ctx, fileId, userId)
+	if err != nil {
+		return err
+	}
+
+	if fileInfo == nil {
+		return errors.New("")
+	}
+
+	if fileInfo.FileID == "0" {
+		return errors.New("")
+	}
+
+	if fileInfo.FilePid == rootFilePid {
+		return nil
+	}
+	return f.checkFilePid(ctx, rootFilePid, fileInfo.FilePid, userId)
+}
+
+func (f *FileSrv) SaveShare(ctx context.Context,
+	shareRootFilePid,
+	shareFileIds, myFolderId,
+	shareUserId, currentUserId string) error {
+	shareFileIdArray := strings.Split(shareFileIds, ",")
+	query := new(schema.RequestFileListPage)
+	query.FilePid = myFolderId
+	query.DelFlag = define.FileFlagInUse
+	currentFileList, err := f.Repo.GetFileList(ctx, currentUserId, query, false)
+	if err != nil {
+		return err
+	}
+
+	var currentFileMap map[string]file.File
+
+	for _, info := range currentFileList {
+		currentFileMap[info.FileName] = info
+	}
+
+	query = new(schema.RequestFileListPage)
+	query.Path = shareFileIdArray
+	query.DelFlag = define.FileFlagInUse
+	shareFileList, err := f.Repo.GetFileList(ctx, shareUserId, query, false)
+	if err != nil {
+		return err
+	}
+
+	fileList := make([]file.File, 0)
+	currentTime := time.Now().Format("2006-01-02 15:04:05")
+	for _, info := range shareFileList {
+
+		if _, ok := currentFileMap[info.FileName]; ok {
+			fileNewName := fileUtil.Rename(info.FileName)
+			info.FileName = fileNewName
+		}
+		f.findAllSubFileList(ctx, &fileList, info, shareUserId, currentUserId, currentTime, myFolderId)
+	}
+	for _, file := range fileList {
+		if err := f.Repo.UploadFile(ctx, &file); err != nil {
+			return err
+		}
+
+	}
+	return nil
+}
+
+func (f *FileSrv) findAllSubFileList(ctx context.Context, copyFileList *[]file.File, fileInfo file.File, sourceUserId, currentUserID, curentTime string, newFilePid string) {
+
+	sourceFileId := fileInfo.FileID
+	fileInfo.CreateTime = curentTime
+	fileInfo.LastUpdateTime = curentTime
+	fileInfo.FilePid = newFilePid
+	fileInfo.FileID = util.MustString()
+	fileInfo.UserID = currentUserID
+
+	*copyFileList = append(*copyFileList, fileInfo)
+	if fileInfo.FileType == define.FileTypeFolder {
+		query := schema.RequestFileListPage{
+			FilePid: sourceFileId,
+			DelFlag: define.FileFlagInUse,
+		}
+
+		list, err := f.Repo.GetFileList(ctx, sourceUserId, &query, false)
+		if err != nil || len(list) == 0 {
+			return
+		}
+
+		for _, file := range list {
+			f.findAllSubFileList(ctx, copyFileList, file, sourceFileId, curentTime, curentTime, fileInfo.FileID)
+		}
+	}
+
 }

@@ -2,9 +2,10 @@ package middleware
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"strconv"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 func PrintUrlRequest() gin.HandlerFunc {
@@ -14,7 +15,8 @@ func PrintUrlRequest() gin.HandlerFunc {
 		begin := time.Now().UTC()
 		fmt.Println(ctx.Request.URL.Path)
 		ctx.Next()
-		diff := time.Since(begin).Microseconds()
+		diff := time.Since(begin).Milliseconds()
+
 		fmt.Println(ctx.Request.URL.Path + " 请求结束，处理时间：" + strconv.FormatInt(diff, 10) + " 毫秒")
 
 	}

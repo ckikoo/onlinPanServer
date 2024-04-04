@@ -14,14 +14,15 @@ type IRouter interface {
 }
 
 type Router struct {
-	Auth       auth.Auther
-	LoginAPI   *api.LoginAPI
-	UserApi    *api.UserAPI
-	FileApi    *api.FileApi
-	RecycleApi *api.RecycleApi
-	ShareApi   *api.ShareApi
-	AdminApi   *api.AdminApi
-	PackageApi *api.PackageApi
+	Auth        auth.Auther
+	LoginAPI    *api.LoginAPI
+	UserApi     *api.UserAPI
+	FileApi     *api.FileApi
+	RecycleApi  *api.RecycleApi
+	ShareApi    *api.ShareApi
+	AdminApi    *api.AdminApi
+	PackageApi  *api.PackageApi
+	WebShareApi *api.WebShareApi
 }
 
 func (a *Router) Regitser(app *gin.Engine) error {
@@ -40,6 +41,7 @@ func (a *Router) RegisterApI(app *gin.Engine) {
 	key := "online-cloud-server"
 	g.Use(middleware.PrintUrlRequest())
 	g.Use(middleware.SessionMW(key))
+	g.Use(middleware.UserInfo(a.Auth))
 	g.Use(middleware.AuthMiddleware(a.Auth,
 		middleware.AllowPathPrefixSkipper(
 			"/api/login", "/api/checkCode",
@@ -89,14 +91,15 @@ func (a *Router) RegisterApI(app *gin.Engine) {
 	g.POST("/share/shareFile", a.ShareApi.ShareFile)
 	g.POST("/share/cancelShare", a.ShareApi.CancelShare)
 
-	g.POST("/showShare/getShareLoginInfo", a.ShareApi.GetShareLoginInfo)
-	g.POST("/showShare/getShareInfo", a.ShareApi.GetShareInfo)
-	g.POST("/showShare/loadFileList", a.ShareApi.LoadFileList)
-	g.POST("/showShare/getFolderInfo", a.ShareApi.GetFolderInfo)
-	g.POST("/showShare/checkShareCode", a.ShareApi.CheckShareCode)
-	//g.POST("/showShare/getFile/:id", a.ShareApi.GetFile)
-	// TODO 需要完善接口
-	//g.POST("/share/checkShareCode", a.ShareApi.CheckShareCode)
+	g.POST("/showShare/getShareLoginInfo", a.WebShareApi.GetShareLoginInfo)
+	g.POST("/showShare/getShareInfo", a.WebShareApi.GetShareInfo)
+	g.POST("/showShare/loadFileList", a.WebShareApi.LoadFileList)
+	g.POST("/showShare/getFolderInfo", a.WebShareApi.GetFolderInfo)
+	g.POST("/showShare/checkShareCode", a.WebShareApi.CheckShareCode)
+	g.POST("/showShare/getFile/:shareId/:fileId", a.WebShareApi.GetFile)
+	g.POST("/showShare/createDownloadUrl/:shareId/:fileId", a.WebShareApi.CreateDownloadUrl)
+	g.GET("/showShare/download/:code", a.WebShareApi.Download)
+	g.POST("/showShare/saveShare", a.WebShareApi.SaveShare)
 
 	g.POST("/admin/loadUserList", a.AdminApi.LoadUserList)
 	g.POST("/admin/loadFileList", a.AdminApi.LoadFileList)

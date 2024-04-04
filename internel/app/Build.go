@@ -80,16 +80,22 @@ func BuildInjector() (*Injector, func(), error) {
 		Srv: &service.PackageService{Repo: &pkg.PkgRepo{DB: db, RD: redisx.NewClient()}},
 	}
 
+	WebShareApi := api.WebShareApi{
+		ShareSrv: &ShareSrv,
+		FileSrv:  &FileSrv,
+	}
+
 	go file.Init(context.Background(), db, redisx.NewClient())
 	routerRouter := &router.Router{
-		Auth:       auther,
-		LoginAPI:   &loginApi,
-		UserApi:    &userApi,
-		FileApi:    &fileApi,
-		RecycleApi: &recycleApi,
-		ShareApi:   &ShareApi,
-		AdminApi:   &AdminApi,
-		PackageApi: &packageApi,
+		Auth:        auther,
+		LoginAPI:    &loginApi,
+		UserApi:     &userApi,
+		FileApi:     &fileApi,
+		RecycleApi:  &recycleApi,
+		ShareApi:    &ShareApi,
+		AdminApi:    &AdminApi,
+		PackageApi:  &packageApi,
+		WebShareApi: &WebShareApi,
 	}
 
 	engine := InitGinEngine(routerRouter)

@@ -74,3 +74,11 @@ func (f *ShareRepo) GetShareInfo(ctx context.Context, shareId string) (*Share, e
 	}
 	return share, nil
 }
+func (f *ShareRepo) UpdateShareShowCount(ctx context.Context, shareId string) (bool, error) {
+	db := GetShareDB(ctx, f.DB)
+	res := db.Where("id = ?", shareId).UpdateColumn("show_count", gorm.Expr("show_count + ?", 1))
+	if res.RowsAffected == 0 {
+		return false, errors.New("not found")
+	}
+	return true, nil
+}

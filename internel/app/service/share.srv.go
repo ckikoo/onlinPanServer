@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"fmt"
+	"onlineCLoud/internel/app/dao/dto"
 	"onlineCLoud/internel/app/dao/file"
 	"onlineCLoud/internel/app/dao/share"
 	"onlineCLoud/internel/app/dao/user"
@@ -97,6 +99,7 @@ func (f *ShareSrv) GetShareInfo(ctx context.Context, shareId string) (*schema.Sh
 	if err != nil {
 		return nil, err
 	}
+
 	fileSrv := FileSrv{Repo: &file.FileRepo{Db: f.Repo.DB}}
 	fileinfo, err := fileSrv.GetFileInfo(ctx, info.FileId, info.UserId)
 	if err != nil {
@@ -110,6 +113,9 @@ func (f *ShareSrv) GetShareInfo(ctx context.Context, shareId string) (*schema.Sh
 	shareInfoRes.FileID = info.FileId
 	shareInfoRes.FileName = fileinfo.FileName
 	shareInfoRes.NickName = userinfo.NickName
+	shareInfoRes.CurrentUser = contextx.FromUserID(ctx) == userinfo.UserID
+	fmt.Printf("contextx.FromUserID(ctx): %v\n", contextx.FromUserID(ctx))
+	fmt.Printf("userinfo: %v\n", userinfo)
 	if info.ValidType == define.FileShareForverDay {
 		shareInfoRes.ExpireTime = "永久"
 	} else {
@@ -129,7 +135,7 @@ func (f *ShareSrv) GetShareList(ctx context.Context, req *schema.RequestShareLis
 	var reqFileList schema.RequestFileListPage
 	reqFileList.PageNo = req.GetCurrentPage()
 	reqFileList.PageSize = req.GetPageSize()
-	if len(req.FilePid) != 0 && req.FilePid != "0" {
+	if len(req.FilePid) != 0 && req.FilePid != "0" { //TODO // 后面修复 无效访问
 		reqFileList.FilePid = req.FilePid
 	} else {
 		reqFileList.Path = []string{shareInfo.FileId}
@@ -161,12 +167,26 @@ func (f *ShareSrv) GetFolderInfo(ctx context.Context, shareId string, path strin
 	return info, nil
 
 }
-func (f *ShareSrv) CheckShareCode(ctx context.Context, shareId string, code string) (bool, error) {
+func (f *ShareSrv) CheckShareCode(ctx context.Context, shareId string, code string) (*dto.SessionWebShareDto, error) {
 
 	shareInfo, err := f.Repo.GetShareInfo(ctx, shareId)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
-	return shareInfo.Code == code, nil
+	f.UpdateShareShowCount(ctx, shareId)
+
+	session := new(dto.SessionWebShareDto)
+	session.FileId = shareInfo.FileId
+	session.Expire = shareInfo.ExpireTime
+	session.ShareUserId = shareInfo.UserId
+	session.ShareId = shareInfo.ShareId
+
+	return session, nil
+}
+func (f *ShareSrv) UpdateShareShowCount(ctx context.Context, shareId string) error {
+
+	_, err := f.Repo.UpdateShareShowCount(ctx, shareId)
+
+	return err
 }

@@ -2,13 +2,6 @@ package define
 
 import "strings"
 
-const (
-	FileShare1Day = iota
-	FileShare7Day
-	FileShare30Day
-	FileShareForverDay
-)
-
 // （视频，音频，图片，pdf，doc，exec， 7 txt 8. code 9 zip 10 other ）
 const (
 	FileTypeFolder = iota
@@ -52,21 +45,6 @@ const (
 	DownloadStatusSuccess = iota
 	DownloadStatusClientQuick
 )
-
-func GetDay(Dt int8) int {
-	switch Dt {
-	case FileShare1Day:
-		return 1
-	case FileShare7Day:
-		return 7
-	case FileShare30Day:
-		return 30
-	case FileShareForverDay:
-		return -1
-	default:
-		return -2
-	}
-}
 
 func GetFileType(filename string) int8 {
 

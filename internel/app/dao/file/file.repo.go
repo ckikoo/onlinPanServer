@@ -125,6 +125,15 @@ func (f *FileRepo) UploadFile(ctx context.Context, file *File) error {
 	return nil
 
 }
+func (f *FileRepo) InsertFileBatch(ctx context.Context, file []File) error {
+	err := GetFileDB(ctx, f.Db).CreateInBatches(file, len(file)).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
+
+}
 func (f *FileRepo) DelFiles(ctx context.Context, uid string, fileId []string) error {
 	if len(fileId) == 0 {
 		return nil

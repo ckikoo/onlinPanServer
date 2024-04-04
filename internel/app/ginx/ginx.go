@@ -96,11 +96,11 @@ func ResJson(c *gin.Context, code int, data interface{}, msg string, status stri
 	})
 }
 func ResOk(c *gin.Context) {
-	ResJson(c, 200, map[string]interface{}{}, "操作成功", "success")
+	ResJson(c, 200, nil, "操作成功", "success")
 }
 
 func ResOkWithMessage(c *gin.Context, message string) {
-	ResJson(c, 200, map[string]interface{}{}, message, "success")
+	ResJson(c, 200, nil, message, "success")
 }
 
 func ResOkWithData(c *gin.Context, data interface{}) {
@@ -108,11 +108,11 @@ func ResOkWithData(c *gin.Context, data interface{}) {
 }
 
 func ResFail(c *gin.Context) {
-	ResJson(c, -1, map[string]interface{}{}, "操作失败", "fail")
+	ResJson(c, -1, nil, "操作失败", "fail")
 }
 
 func ResFailWithMessage(c *gin.Context, msg string) {
-	ResJson(c, -1, map[string]interface{}{}, msg, "fail")
+	ResJson(c, -1, nil, msg, "fail")
 }
 
 func ResFailWithData(c *gin.Context, data interface{}) {
