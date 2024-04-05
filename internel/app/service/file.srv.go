@@ -130,27 +130,32 @@ func (srv *FileSrv) UploadFile(c *gin.Context, uid string, fileinfo schema.FileU
 		}
 	}
 
-	// 第一片分片文件不存在+ 其他完整了
 	fh, err := c.FormFile("file")
 	if err != nil {
+		fmt.Printf("err: %v\n", err)
 		return nil, err
 	}
 
 	src, err := fh.Open()
 	if err != nil {
+		fmt.Printf("err: %v\n", err)
 		return nil, err
 	}
+
 	defer src.Close()
 	buf := make([]byte, min(50*1024*1024, fh.Size))
-	// 文件夹路劲 upload/ month / 用户名 / fileid
+
 	var fileid string
 	if fileinfo.FileId == "" {
 		fileid = uuid.MustString()
 	} else {
 		fileid = fileinfo.FileId
 	}
+
 	tempDir := fmt.Sprintf("temp/%v/%v/%v", time.Now().Month(), uid, fileid)
 	filePath := fmt.Sprintf("%v/%v", tempDir, fileinfo.ChunkIndex)
+	fmt.Printf("tempDir: %v\n", tempDir)
+	fmt.Printf("filePath: %v\n", filePath)
 	newFile, err := fileUtil.FileCreate(filePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY)
 	if err != nil {
 		fmt.Printf("err: %v\n", err)
@@ -174,9 +179,9 @@ func (srv *FileSrv) UploadFile(c *gin.Context, uid string, fileinfo schema.FileU
 	statusMap["fileId"] = fileid
 	statusMap["status"] = FILE_STATUS_TRANSFER
 	if fileinfo.ChunkIndex == fileinfo.Chunks-1 {
-		// upload/FileId/FileName
-		uploadDir := fmt.Sprintf("upload/%v", fileid)
-		uploadFile := fmt.Sprintf("%v/%v", uploadDir, fileinfo.FileName)
+		// upload/md5/FileName
+		uploadDir := fmt.Sprintf("upload/%v", fileinfo.FileMd5)
+		uploadFile := fmt.Sprintf("%v/%v", uploadDir, fileinfo.FileMd5+"."+fileUtil.GetFileExt(fileinfo.FileName))
 		if err := fileUtil.FileMerge(tempDir, uploadFile); err != nil {
 			statusMap["fileId"] = fileid
 			statusMap["status"] = FILE_STATUS_TRANSFER_FAIL
@@ -202,14 +207,14 @@ func (srv *FileSrv) UploadFile(c *gin.Context, uid string, fileinfo schema.FileU
 		//TODO
 		if file.FileType == define.FileTypeVideo {
 			CutFile4Video(fileid, file.FilePath) // 文件切片
-			dest := fmt.Sprintf("%s/%s", uploadDir, file.FileID+".png")
+			dest := fmt.Sprintf("%s/%s", uploadDir, file.FileMd5+".png")
 			CreateCover4Video(file.FilePath, 150, dest)
-			file.FileCover = fmt.Sprintf("%v", file.FileID+".png")
+			file.FileCover = fmt.Sprintf("%v", file.FileMd5+".png")
 		} else if file.FileType == define.FileTypeImage {
 			//生成缩略图
-			dest := fmt.Sprintf("%s/%s", uploadDir, file.FileID+".png")
+			dest := fmt.Sprintf("%s/%s", uploadDir, file.FileMd5+".png")
 			CreateCover4Video(file.FilePath, 150, dest)
-			file.FileCover = fmt.Sprintf("%v", file.FileID+".png")
+			file.FileCover = fmt.Sprintf("%v", file.FileMd5+".png")
 		}
 		if err := srv.Repo.UploadFile(c, &file); err != nil {
 			fmt.Println("upload file error", err)
@@ -358,11 +363,11 @@ func CreateCover4Video(path string, width int, desc string) error {
 }
 
 func (f *FileSrv) GetImage(w http.ResponseWriter, r *http.Request, name string) {
-	fid := name[:strings.LastIndex(name, ".")]
+	md5 := name[:strings.LastIndex(name, ".")]
 
 	var content bytes.Buffer
 
-	file, err := os.Open(fmt.Sprintf("upload/%s/%s", fid, name))
+	file, err := os.Open(fmt.Sprintf("upload/%s/%s", md5, name))
 	if err != nil {
 		w.WriteHeader(500)
 		return
@@ -396,8 +401,11 @@ func (f *FileSrv) GetFile(ctx context.Context, fid string, uid string) ([]byte, 
 	if nil == file {
 		return make([]byte, 0), nil
 	}
+
+	fmt.Printf("flag: %v\n", flag)
+	fmt.Printf("file: %v\n", file)
 	if flag {
-		fileNameNoSuffix := fmt.Sprintf("%v/%v/%v", "upload", fid, tmp)
+		fileNameNoSuffix := fmt.Sprintf("%v/%v/%v", "upload", file.FileMd5, tmp)
 		b, err := os.ReadFile(fileNameNoSuffix)
 		if err != nil {
 			return make([]byte, 0), err
@@ -405,7 +413,7 @@ func (f *FileSrv) GetFile(ctx context.Context, fid string, uid string) ([]byte, 
 		return b, nil
 	} else {
 		if (file.FileType) == define.FileTypeVideo {
-			fileNameNoSuffix := fmt.Sprintf("%v%v%v", "upload/", fid, "/index.m3u8")
+			fileNameNoSuffix := fmt.Sprintf("%v%v%v", "upload/", file.FileMd5, "/index.m3u8")
 			b, err := os.ReadFile(fileNameNoSuffix)
 			if err != nil {
 				return make([]byte, 0), err
@@ -413,11 +421,13 @@ func (f *FileSrv) GetFile(ctx context.Context, fid string, uid string) ([]byte, 
 			return b, nil
 
 		} else {
-			filePath := fmt.Sprintf("%v/%v/%v", "upload", fid, file.FileName)
+			filePath := fmt.Sprintf("%v/%v/%v", "upload", file.FileMd5, file.FileName)
 			b, err := os.ReadFile(filePath)
 			if err != nil {
+				fmt.Printf("err: %v\n", err)
 				return make([]byte, 0), err
 			}
+			fmt.Printf("b: %v\n", b)
 			return b, nil
 		}
 	}
@@ -577,6 +587,7 @@ func (f *FileSrv) SaveShare(ctx context.Context,
 	shareFileIds, myFolderId,
 	shareUserId, currentUserId string) error {
 	shareFileIdArray := strings.Split(shareFileIds, ",")
+	fmt.Printf("shareFileIdArray: %v\n", shareFileIdArray)
 	query := new(schema.RequestFileListPage)
 	query.FilePid = myFolderId
 	query.DelFlag = define.FileFlagInUse
@@ -584,13 +595,13 @@ func (f *FileSrv) SaveShare(ctx context.Context,
 	if err != nil {
 		return err
 	}
-
-	var currentFileMap map[string]file.File
+	fmt.Printf("currentFileList: %v\n", currentFileList)
+	currentFileMap := make(map[string]file.File, 0)
 
 	for _, info := range currentFileList {
 		currentFileMap[info.FileName] = info
 	}
-
+	fmt.Printf("currentFileMap: %v\n", currentFileMap)
 	query = new(schema.RequestFileListPage)
 	query.Path = shareFileIdArray
 	query.DelFlag = define.FileFlagInUse
@@ -598,7 +609,7 @@ func (f *FileSrv) SaveShare(ctx context.Context,
 	if err != nil {
 		return err
 	}
-
+	fmt.Printf("shareFileList: %v\n", shareFileList)
 	fileList := make([]file.File, 0)
 	currentTime := time.Now().Format("2006-01-02 15:04:05")
 	for _, info := range shareFileList {
@@ -640,7 +651,7 @@ func (f *FileSrv) findAllSubFileList(ctx context.Context, copyFileList *[]file.F
 		}
 
 		for _, file := range list {
-			f.findAllSubFileList(ctx, copyFileList, file, sourceFileId, curentTime, curentTime, fileInfo.FileID)
+			f.findAllSubFileList(ctx, copyFileList, file, sourceUserId, currentUserID, curentTime, fileInfo.FileID)
 		}
 	}
 

@@ -98,7 +98,7 @@ password = ""
 
 [MySQL]
 # 连接地址
-Host = "ljcctv.bf"
+Host = "localhost"
 # 连接端口
 Port = 23560
 # 用户名

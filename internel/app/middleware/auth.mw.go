@@ -18,6 +18,9 @@ func AuthMiddleware(a auth.Auther, skipper ...SkipperFunc) gin.HandlerFunc {
 
 		if contextx.FromMiddle(ctx.Request.Context()) != "" {
 			ginx.ResFailWithMessage(ctx, contextx.FromMiddle(ctx.Request.Context()))
+			ctx.Abort()
+
+			return
 		}
 
 		ctx.Next()

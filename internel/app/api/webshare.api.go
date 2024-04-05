@@ -294,13 +294,37 @@ func (api *WebShareApi) SaveShare(c *gin.Context) {
 		ginx.ResData(c, 403, []byte("自己分享的文件无法保存到自己"))
 		return
 	}
-	fmt.Printf("session: %v\n", session)
 
-	err := api.FileSrv.SaveShare(ctx, session.FileId, shareFileIds, myFolderId, session.ShareId, currentUser)
+	err := api.FileSrv.SaveShare(ctx, session.FileId, shareFileIds, myFolderId, session.ShareUserId, currentUser)
 	if err != nil {
 		ginx.ResFailWithMessage(c, err.Error())
 		return
 	}
 
 	ginx.ResOk(c)
+}
+func (api *WebShareApi) GetVideoInfo(c *gin.Context) {
+	ctx := c.Request.Context()
+	shareId := c.Param("shareId")
+	fid := c.Param("fid")
+
+	if len(shareId) == 0 || len(fid) == 0 {
+		ginx.ResData(c, 400, []byte("参数缺失"))
+		return
+	}
+
+	session := dto.GetSession(c, shareId)
+	if session == nil {
+		ginx.ResData(c, 403, nil)
+		return
+	}
+
+	body, err := api.FileSrv.GetFile(ctx, fid, session.ShareUserId)
+
+	if err != nil {
+		ginx.ResFail(c)
+		return
+	}
+
+	ginx.ResData(c, 200, []byte(body))
 }

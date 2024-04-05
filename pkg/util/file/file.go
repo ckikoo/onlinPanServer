@@ -10,7 +10,7 @@ import (
 )
 
 func NewDir(path string) (string, error) {
-	err := os.MkdirAll(path, 0700)
+	err := os.MkdirAll(path, 0744)
 	if err != nil {
 		return "", err
 	}
@@ -22,7 +22,7 @@ func FileCreate(filename string, mode int) (*os.File, error) {
 	if err != nil {
 		return nil, err
 	}
-	file, err := os.OpenFile(filename, mode, 0400)
+	file, err := os.OpenFile(filename, mode, 0755)
 	return file, err
 }
 
@@ -34,6 +34,8 @@ func FileMerge(tempDir, dest string) error {
 	}
 	finalFile, err := FileCreate(dest, os.O_WRONLY|os.O_CREATE)
 	if err != nil {
+		fmt.Printf("dest: %v\n", dest)
+		fmt.Printf("err: %v\n", err)
 		return err
 	}
 	defer finalFile.Close()

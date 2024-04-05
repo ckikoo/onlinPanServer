@@ -13,6 +13,7 @@ import (
 	"onlineCLoud/pkg/contextx"
 	"onlineCLoud/pkg/util/json"
 	"onlineCLoud/pkg/util/random"
+
 	"os"
 	"time"
 
@@ -49,7 +50,6 @@ func (f *FileApi) UploadFile(c *gin.Context) {
 	ctx := c.Request.Context()
 	var item schema.FileUpload
 	if err := ginx.ParseForm(c, &item); err != nil {
-
 		ginx.ResFailWithMessage(c, "数据格式有误")
 		return
 	}
@@ -140,7 +140,7 @@ func (f *FileApi) GetFileInfo(c *gin.Context) {
 	if fid == "" {
 		ginx.ResFail(c)
 	}
-
+	fmt.Printf("fid: %v\n", fid)
 	body, err := f.FileSrv.GetFile(ctx, fid, contextx.FromUserID(ctx))
 
 	if err != nil {

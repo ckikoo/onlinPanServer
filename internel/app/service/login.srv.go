@@ -49,9 +49,6 @@ func (a *LoginSrv) Login(ctx context.Context, username, password string) (string
 		fmt.Printf("err: %v\n", err)
 		return "", err
 	}
-	fmt.Printf("v: %v\n", v) //v: {"TotalSpace":104857600,"UseSpace":0}
-	fmt.Printf("item: %+v\n", item)
-	fmt.Printf("item: %v\n", item.UserID)
 	return item.UserID, nil
 }
 

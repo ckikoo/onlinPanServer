@@ -47,6 +47,7 @@ func (a *Router) RegisterApI(app *gin.Engine) {
 			"/api/login", "/api/checkCode",
 			"/api/sendEmailCode", "/api/register",
 			"/api/resetPwd", "/api/file/download/",
+			"/api/getAvatar",
 			"/api/showShare",
 		)))
 
@@ -97,6 +98,8 @@ func (a *Router) RegisterApI(app *gin.Engine) {
 	g.POST("/showShare/getFolderInfo", a.WebShareApi.GetFolderInfo)
 	g.POST("/showShare/checkShareCode", a.WebShareApi.CheckShareCode)
 	g.POST("/showShare/getFile/:shareId/:fileId", a.WebShareApi.GetFile)
+	g.GET("/showShare/getFile/:shareId/:fileId", a.WebShareApi.GetFile)
+	g.GET("/showShare/ts/getVideoInfo/:shareId/:fid", a.WebShareApi.GetVideoInfo)
 	g.POST("/showShare/createDownloadUrl/:shareId/:fileId", a.WebShareApi.CreateDownloadUrl)
 	g.GET("/showShare/download/:code", a.WebShareApi.Download)
 	g.POST("/showShare/saveShare", a.WebShareApi.SaveShare)

@@ -99,6 +99,7 @@ func (f *ShareSrv) GetShareInfo(ctx context.Context, shareId string) (*schema.Sh
 	if err != nil {
 		return nil, err
 	}
+	fmt.Printf("userinfo: %v\n", userinfo)
 
 	fileSrv := FileSrv{Repo: &file.FileRepo{Db: f.Repo.DB}}
 	fileinfo, err := fileSrv.GetFileInfo(ctx, info.FileId, info.UserId)
