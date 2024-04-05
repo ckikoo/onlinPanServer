@@ -1,3 +1,5 @@
+upload*
+img*
 upload/*
 go.sum
 *.sh
