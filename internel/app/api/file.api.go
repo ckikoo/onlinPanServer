@@ -66,14 +66,11 @@ func (f *FileApi) UploadFile(c *gin.Context) {
 func (f *FileApi) CancelUpload(c *gin.Context) {
 	ctx := c.Request.Context()
 	fileId := c.PostForm("fileId")
+	fmt.Printf("fileId: %v\n", fileId)
 	m := make(map[string]interface{}, 0)
-
-	err := os.RemoveAll(fmt.Sprintf("temp/%v/%v/%v", time.Now().Month(), contextx.FromUserID(ctx), fileId))
-	if err != nil {
-		m["status"] = "ERROR"
-	} else {
-		m["status"] = "OK"
-	}
+	item := f.FileSrv.Timer.Del(fileId + contextx.FromUserID(ctx))
+	item.Action()
+	m["status"] = "OK"
 
 	ginx.ResOkWithData(c, m)
 }
@@ -223,7 +220,7 @@ func (f *FileApi) ChangeFileFolder(c *gin.Context) {
 	fmt.Println(filePid)
 	err := f.FileSrv.ChangeFileFolder(ctx, contextx.FromUserID(ctx), fileIds, filePid)
 	if err != nil {
-		panic(err)
+		ginx.ResFailWithMessage(c, err.Error())
 		return
 	}
 	ginx.ResOk(c)

@@ -23,6 +23,7 @@ type User struct {
 	UserSpace
 	CreateTime   time.Time `json:"joinTime"`
 	LastJoinTime time.Time `json:"lastLoginTime"`
+	EncPassWord  string    `form:"encPassword" gorm:"column:encPassword"`
 }
 
 type UserSpace struct {

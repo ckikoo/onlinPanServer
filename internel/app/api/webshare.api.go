@@ -73,38 +73,29 @@ func (api *WebShareApi) GetShareInfo(c *gin.Context) {
 func (api *WebShareApi) LoadFileList(c *gin.Context) {
 
 	ctx := c.Request.Context()
-	p1 := time.Now()
 	item := new(schema.RequestShareListPage)
 	if err := ginx.ParseForm(c, item); err != nil {
 		ginx.ResFailWithMessage(c, err.Error())
 		return
 	}
-	p2 := time.Now()
 
 	session := dto.GetSession(c, item.ShareId)
 	if session == nil {
+		ginx.ResNeedReload(c)
 		return
 	}
 
-	p3 := time.Now()
 	if err := api.checkShare(ctx, item.ShareId); err != nil {
 		ginx.ResOkWithMessage(c, err.Error())
 		return
 	}
 
-	p4 := time.Now()
 	info, err := api.ShareSrv.GetShareList(ctx, item)
 	if err != nil {
 		ginx.ResFail(c)
 		return
 	}
-	p5 := time.Now()
 	ginx.ResOkWithData(c, info)
-
-	fmt.Printf("p2.Sub(p1).Milliseconds(): %v\n", p2.Sub(p1).Milliseconds())
-	fmt.Printf("p3.Sub(p2).Milliseconds(): %v\n", p3.Sub(p2).Milliseconds())
-	fmt.Printf("p2.Sub(p1).Milliseconds(): %v\n", p4.Sub(p3).Milliseconds())
-	fmt.Printf("p2.Sub(p1).Milliseconds(): %v\n", p5.Sub(p4).Milliseconds())
 
 }
 
@@ -184,6 +175,7 @@ func (api *WebShareApi) GetFile(c *gin.Context) {
 	}
 	session := dto.GetSession(c, shareId)
 	if session == nil {
+		ginx.ResNeedReload(c)
 		return
 	}
 	body, err := api.FileSrv.GetFile(ctx, fileId, session.ShareUserId)
@@ -206,6 +198,7 @@ func (api *WebShareApi) CreateDownloadUrl(c *gin.Context) {
 
 	session := dto.GetSession(c, shareId)
 	if session == nil {
+		ginx.ResNeedReload(c)
 		return
 	}
 
@@ -260,10 +253,10 @@ func (api *WebShareApi) Download(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "读取文件信息时出错")
 		return
 	}
-	// 限制每次读取的字节数为 100 KB
+
 	limitedReader := &RateLimitedReader{
 		R:     file,
-		Limit: 1024 * 1024, // 每秒读取100 KB
+		Limit: 1024 * 1024,
 	}
 	c.Header("Content-Length", fmt.Sprintf("%d", fi.Size()))
 	c.Writer.Header().Set("Content-Type", "application/octet-stream")
@@ -303,6 +296,7 @@ func (api *WebShareApi) SaveShare(c *gin.Context) {
 
 	ginx.ResOk(c)
 }
+
 func (api *WebShareApi) GetVideoInfo(c *gin.Context) {
 	ctx := c.Request.Context()
 	shareId := c.Param("shareId")
@@ -315,7 +309,7 @@ func (api *WebShareApi) GetVideoInfo(c *gin.Context) {
 
 	session := dto.GetSession(c, shareId)
 	if session == nil {
-		ginx.ResData(c, 403, nil)
+		ginx.ResNeedReload(c)
 		return
 	}
 

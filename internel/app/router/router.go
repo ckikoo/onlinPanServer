@@ -21,8 +21,8 @@ type Router struct {
 	RecycleApi  *api.RecycleApi
 	ShareApi    *api.ShareApi
 	AdminApi    *api.AdminApi
-	PackageApi  *api.PackageApi
 	WebShareApi *api.WebShareApi
+	EncAPI      *api.EncAPI
 }
 
 func (a *Router) Regitser(app *gin.Engine) error {
@@ -65,9 +65,6 @@ func (a *Router) RegisterApI(app *gin.Engine) {
 	g.POST("/updatePassword", a.UserApi.UpdatePassword)
 	g.GET("/getAvatar/:user", a.UserApi.GetUserAvatar)
 
-	g.POST("/package/getinfo", a.PackageApi.GetPackInfo)
-	g.POST("/package/buy", a.PackageApi.BuySpace)
-
 	g.POST("/file/loadDataList", a.FileApi.GetFileList)
 	g.POST("/file/uploadFile", a.FileApi.UploadFile)
 	g.POST("/file/cancelUploadFile", a.FileApi.CancelUpload)
@@ -103,7 +100,13 @@ func (a *Router) RegisterApI(app *gin.Engine) {
 	g.POST("/showShare/createDownloadUrl/:shareId/:fileId", a.WebShareApi.CreateDownloadUrl)
 	g.GET("/showShare/download/:code", a.WebShareApi.Download)
 	g.POST("/showShare/saveShare", a.WebShareApi.SaveShare)
-
+	g.POST("/enc/addFile", a.EncAPI.AddFile)
+	g.POST("/enc/initEncPassword", a.EncAPI.InitPassword)
+	g.POST("/enc/checkPassword", a.EncAPI.CheckPassword)
+	g.POST("/enc/checkEnc", a.EncAPI.CheckEnc)
+	g.POST("/enc/loadencList", a.EncAPI.LoadencList)
+	g.POST("/enc/delFile", a.EncAPI.DelFile)
+	g.POST("/enc/recoverFile", a.EncAPI.RecoverFile)
 	g.POST("/admin/loadUserList", a.AdminApi.LoadUserList)
 	g.POST("/admin/loadFileList", a.AdminApi.LoadFileList)
 	g.POST("/admin/getFolderInfo", a.AdminApi.GetFolderInfo)

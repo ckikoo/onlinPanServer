@@ -95,6 +95,9 @@ func ResJson(c *gin.Context, code int, data interface{}, msg string, status stri
 		Status: status,
 	})
 }
+func ResNeedReload(c *gin.Context) {
+	ResJson(c, 600, nil, "失效", "")
+}
 func ResOk(c *gin.Context) {
 	ResJson(c, 200, nil, "操作成功", "success")
 }

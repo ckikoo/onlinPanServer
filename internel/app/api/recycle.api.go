@@ -30,6 +30,7 @@ func (f *RecycleApi) GetFileList(c *gin.Context) {
 	fmt.Printf("pageNo: %v\n", pageSize)
 	if err != nil {
 		ginx.ResFailWithMessage(c, "获取数据失败")
+		return
 	}
 	res, err := f.RecycleSrv.LoadListFiles(c, contextx.FromUserID(ctx), PageNo, PageSize)
 	if err != nil {

@@ -2,32 +2,115 @@ package timer
 
 import (
 	"container/heap"
+	"fmt"
+	"sync"
 	"time"
 )
 
-type Timer int
-
-func NewTimer() *Timer {
-	return new(Timer)
+// TimerManager 定时器管理器
+type TimerManager struct {
+	timer       *time.Timer
+	timerHeap   *TimeHeap
+	closeChan   chan struct{}
+	hasItemChan chan struct{}
+	mu          *sync.Mutex
 }
 
-// Schedule 安排一个函数在指定时间执行
-func (timer *Timer) Push(th *TimeHeap, t time.Time, action func()) {
-	heap.Push(th, &TimeItem{priority: t, action: action})
-}
+// NewTimerManager 创建一个新的定时器管理器
+func NewTimerManager() (*TimerManager, func()) {
+	timerHeap := &TimeHeap{}
+	heap.Init(timerHeap)
 
-func (timer *Timer) Run(th *TimeHeap) {
-	for {
-		// 检查堆顶元素的时间是否到了
-		now := time.Now()
-		item := th.Peek()
-		if item == nil || !now.After(item.priority) {
-			time.Sleep(500 * time.Millisecond) // 没有任务或还未到时间，稍等一会
-			continue
-		}
-
-		// 时间到了，执行相应的函数
-		item = heap.Pop(th).(*TimeItem)
-		item.action()
+	timer := &TimerManager{
+		timer:       time.NewTimer(0), // 初始化一个立即过期的定时器
+		timerHeap:   timerHeap,
+		closeChan:   make(chan struct{}),
+		hasItemChan: make(chan struct{}, 1), // 使用缓冲通道，避免阻塞
+		mu:          &sync.Mutex{},
 	}
+
+	go timer.Run()
+	return timer, timer.Close
+}
+
+// Run 启动定时器管理器
+func (tm *TimerManager) Run() {
+	defer func() {
+		if tm.timer != nil {
+			tm.timer.Stop()
+		}
+		close(tm.hasItemChan)
+	}()
+
+	for {
+		select {
+		case <-tm.closeChan:
+			return
+
+		case <-tm.timer.C:
+			tm.executeExpiredTasks()
+		case <-tm.hasItemChan:
+			tm.resetTimer()
+		default:
+			time.Sleep(time.Millisecond * 100)
+		}
+	}
+}
+
+// resetTimer 重新设置定时器
+func (tm *TimerManager) resetTimer() {
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+	if tm.timerHeap.Len() > 0 {
+		duration := tm.timerHeap.Peek().Deadline.Sub(time.Now())
+		tm.timer.Reset(duration)
+	}
+}
+
+// executeExpiredTasks 执行到期任务
+func (tm *TimerManager) executeExpiredTasks() {
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+	for tm.timerHeap.Len() > 0 {
+		nextItem := tm.timerHeap.Peek()
+		if nextItem.Deadline.After(time.Now()) {
+			return
+		}
+		heap.Pop(tm.timerHeap).(*TimeItem).Action()
+	}
+}
+
+// Add 添加一个定时任务
+func (tm *TimerManager) Add(key interface{}, deadline time.Time, action func()) {
+
+	item := &TimeItem{
+		Key:      key,
+		Deadline: deadline,
+		Action:   action,
+	}
+	tm.mu.Lock()
+
+	heap.Push(tm.timerHeap, item)
+	tm.mu.Unlock()
+
+	tm.hasItemChan <- struct{}{}
+}
+
+// Del 根据键删除一个定时任务
+func (tm *TimerManager) Del(key interface{}) *TimeItem {
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+
+	for i, item := range *tm.timerHeap {
+		if item.Key == key {
+			fmt.Println("1111")
+			return heap.Remove(tm.timerHeap, i).(*TimeItem)
+		}
+	}
+	return nil
+}
+
+// Close 关闭定时器管理器
+func (tm *TimerManager) Close() {
+	close(tm.closeChan)
 }

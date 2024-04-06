@@ -36,6 +36,7 @@ func (f *FileRepo) GetFileList(ctx context.Context, uid string, schema *schema.R
 		db = db.Where("file_id in (?)", schema.Path)
 	}
 
+	db = db.Where("secure=?", schema.Secure)
 	db = db.Where("del_flag = ?", schema.DelFlag)
 
 	// 排除 //防止自己覆盖自己
@@ -82,6 +83,7 @@ func (f *FileRepo) GetFileListTotal(ctx context.Context, uid string, schema *sch
 	if schema.Path != nil && len(schema.Path) > 0 {
 		db = db.Where("file_id in (?)", schema.Path)
 	}
+	db = db.Where("secure=?", schema.Secure)
 	db = db.Where("del_flag = ?", schema.DelFlag)
 	db = db.Where("user_id=?", uid)
 	var total int64
@@ -96,22 +98,15 @@ func (f *FileRepo) GetFileListTotal(ctx context.Context, uid string, schema *sch
 
 func (f *FileRepo) CheckFileExists(ctx context.Context, md5 string) (*File, error) {
 
-	file, err := FileCache.FindMd5(ctx, md5)
-	if err == CachaNoFound {
+	db := GetFileDB(ctx, f.Db)
+	db = db.Where("file_md5 =?", md5)
 
-		db := GetFileDB(ctx, f.Db)
-		db = db.Where("file_md5 =?", md5)
-
-		var file File
-		err := db.First(&file).Error
-		if err != nil && err != gorm.ErrRecordNotFound {
-			return nil, err
-		}
-		FileCache.AddFile(ctx, file)
-		return &file, nil
-	} else {
-		return file, err
+	var file File
+	err := db.First(&file).Error
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return nil, err
 	}
+	return &file, nil
 
 }
 
@@ -121,7 +116,6 @@ func (f *FileRepo) UploadFile(ctx context.Context, file *File) error {
 		return err
 	}
 
-	FileCache.AddFile(ctx, *file)
 	return nil
 
 }
@@ -139,8 +133,6 @@ func (f *FileRepo) DelFiles(ctx context.Context, uid string, fileId []string) er
 		return nil
 	}
 	db := GetFileDB(ctx, f.Db)
-
-	fmt.Printf("fileId: %v\n", fileId)
 
 	return db.Where("user_id=?", uid).Delete("file_id in (?)", fileId).Error
 
@@ -178,7 +170,24 @@ func (f *FileRepo) CheckFileName(ctx context.Context, filePId string, uid string
 	}
 	return &file, nil
 }
+func (f *FileRepo) GetFileByMd5(ctx context.Context, md5 string) (*File, error) {
+	db := GetFileDB(ctx, f.Db)
 
+	var file File
+	db = db.Where(File{
+		FileMd5: md5,
+	})
+
+	if err := db.First(&file).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return &file, nil
+		} else {
+			return nil, err
+
+		}
+	}
+	return &file, nil
+}
 func (f *FileRepo) FileRename(ctx context.Context, uid string, fileId string, filePid string, fileName string) (bool, error) {
 	db := GetFileDB(ctx, f.Db)
 
@@ -208,4 +217,12 @@ func (f *FileRepo) UpdateFileDelFlag(ctx context.Context, UserID string, filePid
 		db = db.Where("file_id in (?)", fileIds)
 	}
 	return db.Where("user_id=?", UserID).Where("del_flag=?", oldFlag).Updates(map[string]interface{}{"del_flag": newFlag, "recovery_time": reTime}).Error
+}
+func (f *FileRepo) UpdateFileSecure(ctx context.Context, UserID string, fileIds []string, status bool) error {
+	db := GetFileDB(ctx, f.Db)
+
+	if fileIds != nil && len(fileIds) > 0 {
+		db = db.Where("file_id in (?)", fileIds)
+	}
+	return db.Where("user_id=?", UserID).Updates(map[string]interface{}{"secure": status}).Error
 }

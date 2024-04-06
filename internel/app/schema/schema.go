@@ -27,6 +27,7 @@ type RequestFileListPage struct {
 	OrderBy       string
 	FolderType    int8
 	DelFlag       int8
+	Secure        bool
 }
 
 type ListResult struct {

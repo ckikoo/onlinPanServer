@@ -29,6 +29,7 @@ type File struct {
 	CreateTime     string `json:"createTime"   form:"createTime" gorm:"column:create_time"`                               //创建时间
 	LastUpdateTime string `json:"lastUpdateTime" form:"lastUpdateTime" gorm:"column:last_update_time"`                    //上一次访问时间
 	RecoveryTime   string `json:"recoveryTime" form:"recoveryTime" gorm:"column:recovery_time"`                           //进入回收站时间
+	Secure         bool
 }
 
 func ToMd5Map(files []File) map[string]interface{} {

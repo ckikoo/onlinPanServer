@@ -7,7 +7,7 @@ import (
 )
 
 func sessionConfig() sessions.Store {
-	sessionMaxAge := 60 * 5
+	sessionMaxAge := 60 * 15
 	sessionSecret := "session"
 	store := cookie.NewStore([]byte(sessionSecret))
 	store.Options(sessions.Options{

@@ -167,3 +167,14 @@ func (a *UserRepo) UpdateSpace(ctx context.Context, email string, add uint64, up
 	a.Rd.Delete(ctx, "user:space:"+email)
 	return nil
 }
+
+func (a *UserRepo) UpdateEncPassword(ctx context.Context, email string, password string) error {
+
+	db := GetUserDB(ctx, a.DB).Where("email = ?", email)
+
+	err := db.UpdateColumn("encPassword", password).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}

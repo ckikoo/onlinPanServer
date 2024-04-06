@@ -15,6 +15,7 @@ import (
 	"onlineCLoud/internel/app/define"
 	"onlineCLoud/internel/app/schema"
 	"onlineCLoud/pkg/contextx"
+	"onlineCLoud/pkg/timer"
 	fileUtil "onlineCLoud/pkg/util/file"
 	processutil "onlineCLoud/pkg/util/process"
 	"onlineCLoud/pkg/util/uuid"
@@ -29,7 +30,8 @@ import (
 )
 
 type FileSrv struct {
-	Repo *file.FileRepo
+	Repo  *file.FileRepo
+	Timer *timer.TimerManager
 }
 
 func (f *FileSrv) LoadListFiles(ctx context.Context, uid string, p *schema.RequestFileListPage) (*schema.ListResult, error) {
@@ -39,10 +41,12 @@ func (f *FileSrv) LoadListFiles(ctx context.Context, uid string, p *schema.Reque
 	if p.Category != "" && p.Category != "all" {
 		p.Category = strconv.Itoa(int(define.FileCategoryStr4ID(p.Category)))
 	}
+
 	files, err := f.Repo.GetFileList(ctx, uid, p, true)
 	if err != nil {
 		return nil, err
 	}
+
 	total, err := f.Repo.GetFileListTotal(ctx, uid, p)
 	if err != nil {
 		return nil, err
@@ -97,20 +101,21 @@ func (srv *FileSrv) UploadFile(c *gin.Context, uid string, fileinfo schema.FileU
 		return statusMap, nil
 	}
 	if fileinfo.ChunkIndex == 0 {
-		fmt.Println("debug the first chunk")
 		file, err := srv.Repo.CheckFileName(c.Request.Context(), fileinfo.FilePid, uid, fileinfo.FileName, "0")
 		if err != nil {
 			return nil, err
 		}
-
-		fmt.Printf("file: %v\n", file)
 		if file != nil && file.FileName != "" {
-			fmt.Println("111")
-			fileinfo.FileName = fileUtil.Rename(fileinfo.FileName)
+			file.FileName = fileUtil.Rename(fileinfo.FileName)
+		}
+
+		file, err = srv.Repo.GetFileByMd5(c, file.FileMd5)
+		if err != nil {
+			return nil, err
 		}
 
 		if file != nil && file.FileMd5 != "" {
-			file.FileName = fileinfo.FileName
+			file.FileName = fileUtil.Rename(fileinfo.FileName)
 			file.CreateTime = time.Now().Format("2006-01-02 15:04:05")
 			file.LastUpdateTime = time.Now().Format("2006-01-02 15:04:05")
 			file.FileID = util.MustString()
@@ -152,10 +157,14 @@ func (srv *FileSrv) UploadFile(c *gin.Context, uid string, fileinfo schema.FileU
 		fileid = fileinfo.FileId
 	}
 
-	tempDir := fmt.Sprintf("temp/%v/%v/%v", time.Now().Month(), uid, fileid)
+	tempDir := fmt.Sprintf("temp/%v/%v", uid, fileid)
 	filePath := fmt.Sprintf("%v/%v", tempDir, fileinfo.ChunkIndex)
-	fmt.Printf("tempDir: %v\n", tempDir)
-	fmt.Printf("filePath: %v\n", filePath)
+	if fileinfo.ChunkIndex == 0 {
+		srv.Timer.Add(fileid+contextx.FromUserID(c.Request.Context()), time.Now().Add(time.Minute*30), func() {
+			srv.CancelUpload(c, contextx.FromUserID(c.Request.Context()), fileid)
+		})
+	}
+
 	newFile, err := fileUtil.FileCreate(filePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY)
 	if err != nil {
 		fmt.Printf("err: %v\n", err)
@@ -173,12 +182,13 @@ func (srv *FileSrv) UploadFile(c *gin.Context, uid string, fileinfo schema.FileU
 		_, err = newFile.Write(buf)
 		if err != nil {
 			log.Fatal("空间不足")
-			return nil, errors.ErrUnsupported
+			return nil, errors.New("internal error")
 		}
 	}
 	statusMap["fileId"] = fileid
 	statusMap["status"] = FILE_STATUS_TRANSFER
 	if fileinfo.ChunkIndex == fileinfo.Chunks-1 {
+		srv.Timer.Del(fileid + contextx.FromUserID(c.Request.Context()))
 		// upload/md5/FileName
 		uploadDir := fmt.Sprintf("upload/%v", fileinfo.FileMd5)
 		uploadFile := fmt.Sprintf("%v/%v", uploadDir, fileinfo.FileMd5+"."+fileUtil.GetFileExt(fileinfo.FileName))
@@ -204,7 +214,6 @@ func (srv *FileSrv) UploadFile(c *gin.Context, uid string, fileinfo schema.FileU
 		file.FileType = define.GetFileType(ext)
 		file.FileCategory = define.FileCategoryStr4ID(ext)
 		usrv.UpdateSpace(c.Request.Context(), contextx.FromUserEmail(c.Request.Context()), file.FileSize)
-		//TODO
 		if file.FileType == define.FileTypeVideo {
 			CutFile4Video(fileid, file.FilePath) // 文件切片
 			dest := fmt.Sprintf("%s/%s", uploadDir, file.FileMd5+".png")
@@ -328,10 +337,16 @@ func (f *FileSrv) DelFiles(ctx context.Context, uid string, fileId string) error
 	if fileInfoList == nil || len(fileInfoList) == 0 {
 		return nil
 	}
+
 	delFileList := make([]string, 0)
 	//TODO fix
 
 	for _, e := range fileInfoList {
+		go func() {
+			f.Timer.Add("file_"+e.FileID+e.UserID, time.Now().Add(time.Hour*24*10), func() {
+				f.Repo.DelFiles(ctx, e.UserID, []string{e.FileID})
+			})
+		}()
 		f.findAllSubFolderFileIdList(ctx, &delFileList, uid, e.FileID, define.FileFlagInUse)
 	}
 
@@ -402,8 +417,6 @@ func (f *FileSrv) GetFile(ctx context.Context, fid string, uid string) ([]byte, 
 		return make([]byte, 0), nil
 	}
 
-	fmt.Printf("flag: %v\n", flag)
-	fmt.Printf("file: %v\n", file)
 	if flag {
 		fileNameNoSuffix := fmt.Sprintf("%v/%v/%v", "upload", file.FileMd5, tmp)
 		b, err := os.ReadFile(fileNameNoSuffix)
@@ -655,4 +668,14 @@ func (f *FileSrv) findAllSubFileList(ctx context.Context, copyFileList *[]file.F
 		}
 	}
 
+}
+
+func (srv *FileSrv) CancelUpload(ctx context.Context, uid string, fileid string) error {
+	path := fmt.Sprintf("temp/%v/%v", uid, fileid)
+	return os.RemoveAll(path)
+}
+
+func (srv *FileSrv) UpdateFileSecure(ctx context.Context, uid string, fileid string, status bool) error {
+	fileids := strings.Split(fileid, ",")
+	return srv.Repo.UpdateFileSecure(ctx, uid, fileids, status)
 }

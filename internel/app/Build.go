@@ -5,12 +5,15 @@ import (
 	"onlineCLoud/internel/app/api"
 	"onlineCLoud/internel/app/dao/file"
 	"onlineCLoud/internel/app/dao/mailx"
-	"onlineCLoud/internel/app/dao/pkg"
 	"onlineCLoud/internel/app/dao/redisx"
 	"onlineCLoud/internel/app/dao/share"
 	"onlineCLoud/internel/app/dao/user"
+	"onlineCLoud/internel/app/define"
 	"onlineCLoud/internel/app/router"
+	"onlineCLoud/internel/app/schema"
 	"onlineCLoud/internel/app/service"
+	"onlineCLoud/pkg/timer"
+	"time"
 )
 
 func BuildInjector() (*Injector, func(), error) {
@@ -24,6 +27,8 @@ func BuildInjector() (*Injector, func(), error) {
 		cleanup()
 		return nil, nil, err
 	}
+	timer, timerClean := timer.NewTimerManager()
+
 	cleanup3 := mailx.Init()
 
 	UserRepo := user.UserRepo{
@@ -49,14 +54,23 @@ func BuildInjector() (*Injector, func(), error) {
 		Db: db,
 	}
 	FileSrv := service.FileSrv{
-		Repo: &fileRepo,
+		Repo:  &fileRepo,
+		Timer: timer,
 	}
 	fileApi := api.FileApi{
 		FileSrv: &FileSrv,
 	}
+	EncSrv := service.EncSrv{
+		UserRepo: &UserRepo,
+	}
+	EncApi := api.EncAPI{
+		EncSrv:  &EncSrv,
+		FileSrv: &FileSrv,
+	}
 
 	RecycleSrv := service.RecycleSrv{
-		Repo: &fileRepo,
+		Repo:  &fileRepo,
+		Timer: timer,
 	}
 	recycleApi := api.RecycleApi{
 		RecycleSrv: &RecycleSrv,
@@ -76,16 +90,11 @@ func BuildInjector() (*Injector, func(), error) {
 		ShareSrv: &ShareSrv,
 	}
 
-	packageApi := api.PackageApi{
-		Srv: &service.PackageService{Repo: &pkg.PkgRepo{DB: db, RD: redisx.NewClient()}},
-	}
-
 	WebShareApi := api.WebShareApi{
 		ShareSrv: &ShareSrv,
 		FileSrv:  &FileSrv,
 	}
 
-	go file.Init(context.Background(), db, redisx.NewClient())
 	routerRouter := &router.Router{
 		Auth:        auther,
 		LoginAPI:    &loginApi,
@@ -94,9 +103,20 @@ func BuildInjector() (*Injector, func(), error) {
 		RecycleApi:  &recycleApi,
 		ShareApi:    &ShareApi,
 		AdminApi:    &AdminApi,
-		PackageApi:  &packageApi,
 		WebShareApi: &WebShareApi,
+		EncAPI:      &EncApi,
 	}
+
+	go func() {
+		list, _ := fileRepo.GetFileList(context.Background(), "*", &schema.RequestFileListPage{DelFlag: define.FileFlagInRecycleBin}, false)
+		for _, file := range list {
+			joinTime, _ := time.Parse("2006-01-02 15:04:05", file.RecoveryTime)
+			EndTime := joinTime.Add(time.Hour * 24 * 10)
+			timer.Add("file_"+file.FileID+file.UserID, EndTime, func() {
+				RecycleSrv.DelFiles(context.Background(), file.UserID, file.FileID)
+			})
+		}
+	}()
 
 	engine := InitGinEngine(routerRouter)
 
@@ -109,6 +129,7 @@ func BuildInjector() (*Injector, func(), error) {
 		cleanup()
 		cleanup2()
 		cleanup3()
+		timerClean()
 	}, nil
 
 }

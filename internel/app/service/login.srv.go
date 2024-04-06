@@ -93,7 +93,6 @@ func (a *LoginSrv) GenerateToken(ctx context.Context, userID string) (*map[strin
 	item["AccessToken"] = tokenInfo.GetAccessToken()
 	item["ExpiresAt"] = tokenInfo.GetExpiresAt()
 	item["TokenType"] = tokenInfo.GetTokenType()
-	fmt.Printf("item: %v\n", item)
 	return &item, nil
 }
 

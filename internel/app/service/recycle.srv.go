@@ -10,13 +10,15 @@ import (
 	"onlineCLoud/internel/app/define"
 	"onlineCLoud/internel/app/schema"
 	"onlineCLoud/pkg/contextx"
+	"onlineCLoud/pkg/timer"
 	fileUtil "onlineCLoud/pkg/util/file"
 	"strings"
 	"time"
 )
 
 type RecycleSrv struct {
-	Repo *file.FileRepo
+	Repo  *file.FileRepo
+	Timer *timer.TimerManager
 }
 
 func (f *RecycleSrv) LoadListFiles(ctx context.Context, uid string, pageNo, pageSize int64) (*schema.ListResult, error) {
@@ -61,7 +63,7 @@ func (f *RecycleSrv) findAllSubFolderFileList(ctx context.Context, fileIdList *[
 
 }
 
-func (f *RecycleSrv) DelFiles(ctx context.Context, uid string, fileId string, admin ...bool) error {
+func (f *RecycleSrv) DelFiles(ctx context.Context, uid string, fileId string) error {
 	fileIds := strings.Split(fileId, ",")
 	query := schema.RequestFileListPage{
 		Path:    fileIds,
@@ -126,6 +128,7 @@ func (f *RecycleSrv) delfileToUpdateSpace(ctx context.Context, userid string) {
 // 恢复文件-- 》 找当前在回收站的  --》 子目录 --》 父目录更新在根目录下 -- 》 子目录修改状态
 func (f *RecycleSrv) RecoverFile(ctx context.Context, uid string, fileIds string) error {
 	fildIdArray := strings.Split(fileIds, ",")
+
 	query := schema.RequestFileListPage{
 		Path:    fildIdArray,
 		DelFlag: define.FileFlagInRecycleBin,
@@ -178,10 +181,13 @@ func (f *RecycleSrv) RecoverFile(ctx context.Context, uid string, fileIds string
 		}
 		file.FilePid = "0"
 		file.LastUpdateTime = time.Now().Format("2006-01-02 15:04:05")
-		file.RecoveryTime = " "
+		file.RecoveryTime = ""
 		file.DelFlag = define.FileFlagInUse
 		f.Repo.UpdateFile(ctx, &file)
+	}
 
+	for _, fid := range fildIdArray {
+		f.Timer.Del("file_" + fid + uid)
 	}
 
 	return nil

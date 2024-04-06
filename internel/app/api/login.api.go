@@ -27,12 +27,12 @@ func (a *LoginAPI) Login(c *gin.Context) {
 		ginx.ResFailWithMessage(c, "数据错误")
 		return
 	}
-	//TODO :WAIT for open
-	// checkCode := c.PostForm("checkCode")
-	// if !service.CaptchaVerify(c, "0", checkCode) {
-	// 	ginx.ResFailWithMessage(c, "验证码错误")
-	// 	return
-	// }
+
+	checkCode := c.PostForm("checkCode")
+	if !service.CaptchaVerify(c, "0", checkCode) {
+		ginx.ResFailWithMessage(c, "验证码错误")
+		return
+	}
 	user_id, err := a.LoginSrv.Login(ctx, item.Email, item.Password)
 
 	if err != nil {
@@ -44,7 +44,6 @@ func (a *LoginAPI) Login(c *gin.Context) {
 	v, _ := json.Marshal(tokenMap)
 
 	ginx.ResOkWithData(c, string(v))
-	return
 }
 
 func (a *LoginAPI) Register(c *gin.Context) {
