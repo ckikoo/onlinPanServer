@@ -22,7 +22,7 @@ func FileCreate(filename string, mode int) (*os.File, error) {
 	if err != nil {
 		return nil, err
 	}
-	file, err := os.OpenFile(filename, mode, 0755)
+	file, err := os.OpenFile(filename, mode, 0644)
 	return file, err
 }
 

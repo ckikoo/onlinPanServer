@@ -11,7 +11,9 @@ import (
 	"onlineCLoud/internel/app/ginx"
 	"onlineCLoud/internel/app/schema"
 	"onlineCLoud/internel/app/service"
+	"onlineCLoud/pkg/cache"
 	"onlineCLoud/pkg/contextx"
+	hdfsUtil "onlineCLoud/pkg/util/hdfs"
 	"onlineCLoud/pkg/util/random"
 	"os"
 	"time"
@@ -225,7 +227,6 @@ func (api *WebShareApi) Download(c *gin.Context) {
 
 	ctx := c.Request.Context()
 	code := c.Param("code")
-
 	if len(code) == 0 {
 		ginx.ResFail(c)
 		return
@@ -234,34 +235,42 @@ func (api *WebShareApi) Download(c *gin.Context) {
 	var dto dto.DownloadDto
 	rdx := redisx.NewClient()
 	str, err := rdx.Get(ctx, fmt.Sprintf("download:%v", code))
-	if err != nil {
-		ginx.ResFail(c)
+	if err != nil || len(str) == 0 {
+		ginx.ResFailWithMessage(c, "文件不存在")
 		return
 	}
+
+	api.FileSrv.Timer.Add("local_cache_delete"+dto.Path, time.Now().Add(time.Hour*24), func() {
+		os.RemoveAll(dto.Path)
+	})
+	api.FileSrv.Timer.Add("hdfs_cache_delete"+dto.Path, time.Now().Add(time.Hour*24*7), func() {
+		client, err := hdfsUtil.NewClient("172.20.0.2:9000")
+		if err != nil {
+			panic(err)
+		}
+		client.DeleteFile("/" + dto.Path)
+	})
 
 	json.Unmarshal([]byte(str), &dto)
 
-	file, err := os.Open(dto.Path)
+	cr := cache.NewCacheReader(dto.Path)
+	reader, err := cr.Read()
 	if err != nil {
-		c.String(http.StatusNotFound, "文件未找到")
+		c.String(http.StatusNotFound, err.Error())
 		return
 	}
-	defer file.Close()
+	defer reader.Close()
 
-	fi, err := file.Stat()
-	if err != nil {
-		c.String(http.StatusInternalServerError, "读取文件信息时出错")
-		return
-	}
+	json.Unmarshal([]byte(str), &dto)
 
 	limitedReader := &RateLimitedReader{
-		R:     file,
+		R:     reader,
 		Limit: 1024 * 1024,
 	}
-	c.Header("Content-Length", fmt.Sprintf("%d", fi.Size()))
+	c.Header("Content-Length", fmt.Sprintf("%d", dto.FileSize))
 	c.Writer.Header().Set("Content-Type", "application/octet-stream")
 	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", dto.FileName))
-	http.ServeContent(c.Writer, c.Request, dto.FileName, fi.ModTime(), limitedReader)
+	http.ServeContent(c.Writer, c.Request, dto.FileName, dto.Modi, limitedReader)
 }
 
 func (api *WebShareApi) SaveShare(c *gin.Context) {

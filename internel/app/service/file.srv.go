@@ -1,7 +1,6 @@
 package service
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -14,9 +13,12 @@ import (
 	"onlineCLoud/internel/app/dao/user"
 	"onlineCLoud/internel/app/define"
 	"onlineCLoud/internel/app/schema"
+	"onlineCLoud/pkg/cache"
 	"onlineCLoud/pkg/contextx"
 	"onlineCLoud/pkg/timer"
 	fileUtil "onlineCLoud/pkg/util/file"
+	hdfsUtil "onlineCLoud/pkg/util/hdfs"
+	ossUtil "onlineCLoud/pkg/util/oss"
 	processutil "onlineCLoud/pkg/util/process"
 	"onlineCLoud/pkg/util/uuid"
 	util "onlineCLoud/pkg/util/uuid"
@@ -105,11 +107,12 @@ func (srv *FileSrv) UploadFile(c *gin.Context, uid string, fileinfo schema.FileU
 		if err != nil {
 			return nil, err
 		}
+		fmt.Printf("file: %v\n", file)
 		if file != nil && file.FileName != "" {
 			file.FileName = fileUtil.Rename(fileinfo.FileName)
 		}
 
-		file, err = srv.Repo.GetFileByMd5(c, file.FileMd5)
+		file, err = srv.Repo.GetFileByMd5(c, fileinfo.FileMd5)
 		if err != nil {
 			return nil, err
 		}
@@ -238,6 +241,30 @@ func (srv *FileSrv) UploadFile(c *gin.Context, uid string, fileinfo schema.FileU
 		err := os.RemoveAll(tempDir)
 		if err != nil {
 			statusMap["satus"] = FILE_STATUS_TRANSFER_FAIL
+			return statusMap, nil
+		}
+		client, err := hdfsUtil.NewClient("172.20.0.2:9000")
+		if err != nil {
+			statusMap["satus"] = FILE_STATUS_TRANSFER_FAIL
+			return statusMap, nil
+		}
+		fmt.Printf("uploadDir: %v\n", uploadDir)
+		err = client.CopyDirFromLocal(uploadDir, "/"+uploadDir)
+		if err != nil {
+			statusMap["satus"] = FILE_STATUS_TRANSFER_FAIL
+			return statusMap, nil
+		}
+
+		ossClient, err := ossUtil.NewClient()
+		if err != nil {
+			statusMap["satus"] = FILE_STATUS_TRANSFER_FAIL
+			return statusMap, nil
+		}
+
+		err = ossClient.CopyDirFromLocal(uploadDir, uploadDir)
+		if err != nil {
+			statusMap["satus"] = FILE_STATUS_TRANSFER_FAIL
+			return statusMap, nil
 		}
 	}
 
@@ -380,23 +407,16 @@ func CreateCover4Video(path string, width int, desc string) error {
 func (f *FileSrv) GetImage(w http.ResponseWriter, r *http.Request, name string) {
 	md5 := name[:strings.LastIndex(name, ".")]
 
-	var content bytes.Buffer
-
-	file, err := os.Open(fmt.Sprintf("upload/%s/%s", md5, name))
+	path := fmt.Sprintf("upload/%s/%s", md5, name)
+	cr := cache.NewCacheReader(path)
+	reader, err := cr.Read()
 	if err != nil {
-		w.WriteHeader(500)
-		return
-	}
-	defer file.Close()
-
-	// 文件读取到
-	_, err = io.Copy(&content, file)
-	if err != nil {
-		w.WriteHeader(500)
+		fmt.Printf("err: %v\n", err)
+		w.WriteHeader(404)
 		return
 	}
 	w.Header().Set("Cache-Control", "max-age=2500")
-	http.ServeContent(w, r, name, time.Time{}, bytes.NewReader(content.Bytes()))
+	http.ServeContent(w, r, name, time.Time{}, reader)
 }
 
 func (f *FileSrv) GetFile(ctx context.Context, fid string, uid string) ([]byte, error) {
@@ -419,15 +439,28 @@ func (f *FileSrv) GetFile(ctx context.Context, fid string, uid string) ([]byte, 
 
 	if flag {
 		fileNameNoSuffix := fmt.Sprintf("%v/%v/%v", "upload", file.FileMd5, tmp)
-		b, err := os.ReadFile(fileNameNoSuffix)
+		cr := cache.NewCacheReader(fileNameNoSuffix)
+		reader, err := cr.Read()
 		if err != nil {
 			return make([]byte, 0), err
 		}
-		return b, nil
+
+		buf, err := io.ReadAll(reader)
+		if err != nil {
+			return make([]byte, 0), err
+		}
+		return buf, nil
 	} else {
 		if (file.FileType) == define.FileTypeVideo {
-			fileNameNoSuffix := fmt.Sprintf("%v%v%v", "upload/", file.FileMd5, "/index.m3u8")
-			b, err := os.ReadFile(fileNameNoSuffix)
+			prefix := fmt.Sprintf("%v%v", "upload/", file.FileMd5)
+
+			fileNameNoSuffix := fmt.Sprintf("%v%v", prefix, "/index.m3u8")
+
+			reader, err := cache.NewCacheReader(fileNameNoSuffix).Read()
+			if err != nil {
+				return make([]byte, 0), err
+			}
+			b, err := io.ReadAll(reader)
 			if err != nil {
 				return make([]byte, 0), err
 			}
@@ -435,12 +468,15 @@ func (f *FileSrv) GetFile(ctx context.Context, fid string, uid string) ([]byte, 
 
 		} else {
 			filePath := fmt.Sprintf("%v/%v/%v", "upload", file.FileMd5, file.FileName)
-			b, err := os.ReadFile(filePath)
+			reader, err := cache.NewCacheReader(filePath).Read()
 			if err != nil {
-				fmt.Printf("err: %v\n", err)
 				return make([]byte, 0), err
 			}
-			fmt.Printf("b: %v\n", b)
+			b, err := io.ReadAll(reader)
+			if err != nil {
+				return make([]byte, 0), err
+			}
+
 			return b, nil
 		}
 	}

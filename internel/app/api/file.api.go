@@ -10,11 +10,14 @@ import (
 	"onlineCLoud/internel/app/ginx"
 	"onlineCLoud/internel/app/schema"
 	"onlineCLoud/internel/app/service"
+	"onlineCLoud/pkg/cache"
 	"onlineCLoud/pkg/contextx"
+	"onlineCLoud/pkg/file"
+	hdfsUtil "onlineCLoud/pkg/util/hdfs"
 	"onlineCLoud/pkg/util/json"
 	"onlineCLoud/pkg/util/random"
-
 	"os"
+
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -108,7 +111,6 @@ func (f *FileApi) DelFiles(c *gin.Context) {
 }
 
 func (f *FileApi) GetImage(c *gin.Context) {
-	fmt.Println("debug")
 	imgsrc := c.Param("src")
 
 	f.FileSrv.GetImage(c.Writer, c.Request, imgsrc)
@@ -232,15 +234,19 @@ func (f *FileApi) CreateDownloadUrl(c *gin.Context) {
 	fid := c.Param("fid")
 	file, err := f.FileSrv.GetFileInfo(ctx, fid, contextx.FromUserID(ctx))
 	if err != nil || file == nil || file.CreateTime == "" || file.FolderType == 1 {
-		ginx.ResJson(c, 600, "", "操作错误", "fail")
+		ginx.ResJson(c, 400, "", "操作错误", "fail")
 		return
 	}
+
 	code := random.GetStrRandom(50)
 
+	modi, _ := time.Parse("2006-01-02 15:04:05", file.CreateTime)
 	dto := dto.DownloadDto{
 		Code:     code,
 		FileName: file.FileName,
 		Path:     file.FilePath,
+		FileSize: file.FileSize,
+		Modi:     modi,
 	}
 
 	rdx := redisx.NewClient()
@@ -260,46 +266,53 @@ func (f *FileApi) Download(c *gin.Context) {
 	var dto dto.DownloadDto
 	rdx := redisx.NewClient()
 	str, err := rdx.Get(ctx, fmt.Sprintf("download:%v", code))
-	if err != nil {
-		ginx.ResFail(c)
+	if err != nil || len(str) == 0 {
+		ginx.ResFailWithMessage(c, "文件不存在")
 		return
 	}
+	f.FileSrv.Timer.Add("local_cache_delete"+dto.Path, time.Now().Add(time.Hour*24), func() {
+		os.RemoveAll(dto.Path)
+	})
+	f.FileSrv.Timer.Add("hdfs_cache_delete"+dto.Path, time.Now().Add(time.Hour*24*7), func() {
+		client, err := hdfsUtil.NewClient("172.20.0.2:9000")
+		if err != nil {
+			panic(err)
+		}
+		client.DeleteFile("/" + dto.Path)
+	})
 
 	json.Unmarshal([]byte(str), &dto)
 
-	file, err := os.Open(dto.Path)
+	cr := cache.NewCacheReader(dto.Path)
+	reader, err := cr.Read()
 	if err != nil {
-		c.String(http.StatusNotFound, "文件未找到")
+		c.String(http.StatusNotFound, err.Error())
 		return
 	}
-	defer file.Close()
+	defer reader.Close()
 
-	fi, err := file.Stat()
-	if err != nil {
-		c.String(http.StatusInternalServerError, "读取文件信息时出错")
-		return
-	}
 	// 限制每次读取的字节数为 100 KB
 	limitedReader := &RateLimitedReader{
-		R:     file,
+		R:     reader,
 		Limit: 1024 * 1024, // 每秒读取100 KB
 	}
-	c.Header("Content-Length", fmt.Sprintf("%d", fi.Size()))
+	c.Header("Content-Length", fmt.Sprintf("%d", dto.FileSize))
 	c.Writer.Header().Set("Content-Type", "application/octet-stream")
 	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", dto.FileName))
-	http.ServeContent(c.Writer, c.Request, dto.FileName, fi.ModTime(), limitedReader)
+	c.Header("Accept-Ranges", "bytes")
+	http.ServeContent(c.Writer, c.Request, dto.FileName, dto.Modi, limitedReader)
 }
 
 // RateLimitedReader 实现了 io.Reader 接口，用于限制读取速度。
 type RateLimitedReader struct {
-	R       io.Reader // 原始的 io.Reader
+	R       io.Reader // 1原始的 io.Reader
 	Limit   int64     // 每秒读取的字节数限制
 	LastSec int64     // 上次读取的时间戳
 	ReadCnt int64     // 当前秒内已读取的字节数
 }
 
 func (r *RateLimitedReader) Seek(offset int64, whence int) (int64, error) {
-	return r.R.(*os.File).Seek(offset, whence)
+	return r.R.(*file.AbstractFile).Seek(offset, whence)
 }
 
 func (r *RateLimitedReader) Read(p []byte) (n int, err error) {
