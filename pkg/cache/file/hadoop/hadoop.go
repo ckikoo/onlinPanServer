@@ -17,12 +17,10 @@ func (hc *HadoopCache) Get(filePath string) (*file.AbstractFile, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("filePath: %v\n", filePath)
 	reader, err := client.OpenFile("/" + filePath)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("reader: %v\n", reader)
 	fileAbs.Closer = reader
 	fileAbs.Reader = reader
 	fileAbs.Closer = reader
