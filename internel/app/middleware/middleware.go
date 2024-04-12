@@ -3,6 +3,7 @@ package middleware
 import (
 	"fmt"
 	"onlineCLoud/internel/app/ginx"
+	"onlineCLoud/pkg/contextx"
 	"onlineCLoud/pkg/errors"
 
 	"strings"
@@ -22,6 +23,22 @@ func NoRouteHandler() gin.HandlerFunc {
 }
 
 type SkipperFunc func(*gin.Context) bool
+
+func AllowAdminSkipper(prefix ...string) SkipperFunc {
+	return func(ctx *gin.Context) bool {
+		path := ctx.Request.URL.Path
+		pathLen := len(path)
+
+		for _, p := range prefix {
+			if p1 := len(p); pathLen >= p1 && path[:p1] == p {
+				admin := contextx.GetAdmin(ctx.Request.Context())
+				return admin == "1" && true
+			}
+		}
+
+		return false
+	}
+}
 
 func AllowPathPrefixSkipper(prefix ...string) SkipperFunc {
 	return func(ctx *gin.Context) bool {

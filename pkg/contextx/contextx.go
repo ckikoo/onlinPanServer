@@ -51,7 +51,19 @@ func FromUserID(ctx context.Context) string {
 	}
 	return ""
 }
+func NewAdmin(ctx context.Context, admin string) context.Context {
+	return context.WithValue(ctx, userIDCtx{}, admin)
+}
 
+func GetAdmin(ctx context.Context) string {
+	v := ctx.Value(userIDCtx{})
+	if v != nil {
+		if s, ok := v.(string); ok {
+			return s
+		}
+	}
+	return ""
+}
 func NewUserEmail(ctx context.Context, userName string) context.Context {
 	return context.WithValue(ctx, userEmailCtx{}, userName)
 }

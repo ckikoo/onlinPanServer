@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"onlineCLoud/internel/app/config"
 	"onlineCLoud/internel/app/dao/dto"
 	"onlineCLoud/internel/app/dao/redisx"
 	"onlineCLoud/internel/app/ginx"
@@ -258,6 +259,7 @@ func (f *FileApi) Download(c *gin.Context) {
 	ctx := c.Request.Context()
 	code := c.Param("code")
 
+	fmt.Printf("c.Request: %v\n", c.Request)
 	if len(code) == 0 {
 		ginx.ResFail(c)
 		return
@@ -294,12 +296,13 @@ func (f *FileApi) Download(c *gin.Context) {
 	// 限制每次读取的字节数为 100 KB
 	limitedReader := &RateLimitedReader{
 		R:     reader,
-		Limit: 1024 * 1024, // 每秒读取100 KB
+		Limit: int64(config.C.Download.Limit) * 1024,
 	}
 	c.Header("Content-Length", fmt.Sprintf("%d", dto.FileSize))
 	c.Writer.Header().Set("Content-Type", "application/octet-stream")
 	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", dto.FileName))
 	c.Header("Accept-Ranges", "bytes")
+	c.Header("Etag", dto.Modi.String())
 	http.ServeContent(c.Writer, c.Request, dto.FileName, dto.Modi, limitedReader)
 }
 
@@ -330,7 +333,6 @@ func (r *RateLimitedReader) Read(p []byte) (n int, err error) {
 
 	// 如果剩余可读字节数为0，则等待1秒后重新计算
 	if remaining <= 0 {
-		time.Sleep(400 * time.Millisecond)
 		return 0, nil
 	}
 

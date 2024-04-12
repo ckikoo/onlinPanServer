@@ -16,8 +16,8 @@ MaxReqLoggerLength = 1024
 
 [File]
 # 默认给用户100M空间 100*1024*1024  字节 ---》 因为申请空间都是以字节为单位
-DefaultSpace = 107374182400
-FileUpload = "upload"
+InitSpaceSize = 107374182400
+FileUploadDir = "upload"
 
 
 [Email]
@@ -54,6 +54,8 @@ Addr = "ljcctv.bf:23561"
 # MasterName = "mymaster"
 # 密码
 Password = "U2FsdGVkX1sc"
+
+
 
 
 [JWTAuth]

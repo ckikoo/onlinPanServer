@@ -1,0 +1,95 @@
+{
+    "AppName": "OnlinePan",
+    "PrintConfig": false,
+    "RunMode": "debug",
+    "HTTP": {
+        "Host": "0.0.0.0",
+        "Port": 8081,
+        "CertFile": "",
+        "KeyFile": "",
+        "ShutdownTimeout": 30,
+        "MaxContentLength": 67108864,
+        "MaxReqLoggerLength": 1024,
+        "MaxResLoggerLength": 1024
+    },
+    "JWTAuth": {
+        "Enable": true,
+        "SigningMethod": "HS512",
+        "SigningKey": "NetCloud",
+        "Expired": 86400,
+        "Store": "redis",
+        "FilePath": "data/jwt_auth.db",
+        "RedisDB": 10,
+        "RedisPrefix": "auth_"
+    },
+    "Captcha": {
+        "Length": 1,
+        "Width": 150,
+        "Height": 30
+    },
+    "Download": {
+        "Limit": 100000
+    },
+    "RateLimiter": {
+        "Enable": false,
+        "Count": 100,
+        "RedisDB": 10
+    },
+    "CORS": {
+        "Enable": false,
+        "AllowOrigins": [
+            "*"
+        ],
+        "AllowMethods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE",
+            "PATCH"
+        ],
+        "AllowHeaders": [],
+        "AllowCredentials": true,
+        "MaxAge": 7200
+    },
+    "Email": {
+        "Host": "smtp.163.com",
+        "Port": "25",
+        "UserName": "lj_5683@163.com",
+        "Password": "BGCFWYIIDGATRQLO"
+    },
+    "Redis": {
+        "Addr": "ljcctv.bf:23561",
+        "Password": "U2FsdGVkX1sc"
+    },
+    "Gorm": {
+        "Debug": false,
+        "DBType": "mysql",
+        "MaxLifetime": 43200,
+        "MaxOpenConns": 150,
+        "MaxIdleConns": 50,
+        "TablePrefix": "tb_",
+        "EnableAutoMigrate": true
+    },
+    "MySQL": {
+        "Host": "localhost",
+        "Port": 23560,
+        "User": "root",
+        "Password": "U2FsdGVkX1sc",
+        "DBName": "NetCloud",
+        "Parameters": "charset=utf8mb4\u0026parseTime=True\u0026loc=Local\u0026allowNativePasswords=true"
+    },
+    "GZIP": {
+        "Enable": true,
+        "ExcludedExtentions": [
+            ".png",
+            ".gif",
+            ".jpeg",
+            ".jpg"
+        ],
+        "ExcludedPaths": []
+    },
+    "File": {
+        "InitSpaceSize": 104857600,
+        "FileUploadDir": "upload"
+    }
+}

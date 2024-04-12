@@ -2,6 +2,7 @@ package router
 
 import (
 	"onlineCLoud/internel/app/api"
+	"onlineCLoud/internel/app/api/admin"
 	"onlineCLoud/internel/app/middleware"
 	"onlineCLoud/pkg/auth"
 
@@ -14,15 +15,16 @@ type IRouter interface {
 }
 
 type Router struct {
-	Auth        auth.Auther
-	LoginAPI    *api.LoginAPI
-	UserApi     *api.UserAPI
-	FileApi     *api.FileApi
-	RecycleApi  *api.RecycleApi
-	ShareApi    *api.ShareApi
-	AdminApi    *api.AdminApi
-	WebShareApi *api.WebShareApi
-	EncAPI      *api.EncAPI
+	Auth          auth.Auther
+	LoginAPI      *api.LoginAPI
+	UserApi       *api.UserAPI
+	FileApi       *api.FileApi
+	RecycleApi    *api.RecycleApi
+	ShareApi      *api.ShareApi
+	AdminApi      *admin.AdminApi
+	AdminLoginApi *admin.AdminLoginAPI
+	WebShareApi   *api.WebShareApi
+	EncAPI        *api.EncAPI
 }
 
 func (a *Router) Regitser(app *gin.Engine) error {
@@ -44,14 +46,25 @@ func (a *Router) RegisterApI(app *gin.Engine) {
 	g.Use(middleware.UserInfo(a.Auth))
 	g.Use(middleware.AuthMiddleware(a.Auth,
 		middleware.AllowPathPrefixSkipper(
+			"/api/admin/login", "/api/admin/resetPwd",
 			"/api/login", "/api/checkCode",
 			"/api/sendEmailCode", "/api/register",
 			"/api/resetPwd", "/api/file/download/",
 			"/api/getAvatar",
 			"/api/showShare",
+		), middleware.AllowAdminSkipper(
+			"/api/admin",
 		)))
 
 	g.Use(middleware.CORSMiddleware())
+	g.POST("/admin/login", a.AdminLoginApi.Login)
+	g.POST("/admin/logout", a.AdminLoginApi.Logout)
+	g.POST("/admin/resetPwd", a.AdminLoginApi.ResetPasswd)
+	g.POST("/admin/loadUserList", a.AdminApi.LoadUserList)
+	g.POST("/admin/getSysSettings", a.AdminApi.GetSysSettings)
+	g.POST("/admin/saveSysSettings", a.AdminApi.SaveSysSettings)
+
+	g.POST("/admin/getUserInfo", a.UserApi.GetInfo)
 
 	g.GET("/checkCode", api.GenerateCaptcha)
 	g.POST("/sendEmailCode", api.SendEmail)
@@ -107,7 +120,5 @@ func (a *Router) RegisterApI(app *gin.Engine) {
 	g.POST("/enc/loadencList", a.EncAPI.LoadencList)
 	g.POST("/enc/delFile", a.EncAPI.DelFile)
 	g.POST("/enc/recoverFile", a.EncAPI.RecoverFile)
-	g.POST("/admin/loadUserList", a.AdminApi.LoadUserList)
-	g.POST("/admin/loadFileList", a.AdminApi.LoadFileList)
-	g.POST("/admin/getFolderInfo", a.AdminApi.GetFolderInfo)
+
 }

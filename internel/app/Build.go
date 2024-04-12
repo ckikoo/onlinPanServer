@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"onlineCLoud/internel/app/api"
+	"onlineCLoud/internel/app/api/admin"
 	"onlineCLoud/internel/app/dao/file"
 	"onlineCLoud/internel/app/dao/mailx"
 	"onlineCLoud/internel/app/dao/redisx"
@@ -80,8 +81,11 @@ func BuildInjector() (*Injector, func(), error) {
 		UserRepo: &UserRepo,
 		FileRepo: &fileRepo,
 	}
-	AdminApi := api.AdminApi{
+	AdminApi := admin.AdminApi{
 		AdminSrv: &AdminSrv,
+	}
+	AdminLoginAPI := admin.AdminLoginAPI{
+		LoginSrv: &loginSrv,
 	}
 	ShareSrv := service.ShareSrv{
 		Repo: &share.ShareRepo{DB: db},
@@ -96,15 +100,16 @@ func BuildInjector() (*Injector, func(), error) {
 	}
 
 	routerRouter := &router.Router{
-		Auth:        auther,
-		LoginAPI:    &loginApi,
-		UserApi:     &userApi,
-		FileApi:     &fileApi,
-		RecycleApi:  &recycleApi,
-		ShareApi:    &ShareApi,
-		AdminApi:    &AdminApi,
-		WebShareApi: &WebShareApi,
-		EncAPI:      &EncApi,
+		Auth:          auther,
+		LoginAPI:      &loginApi,
+		UserApi:       &userApi,
+		FileApi:       &fileApi,
+		RecycleApi:    &recycleApi,
+		ShareApi:      &ShareApi,
+		AdminLoginApi: &AdminLoginAPI,
+		AdminApi:      &AdminApi,
+		WebShareApi:   &WebShareApi,
+		EncAPI:        &EncApi,
 	}
 
 	go func() {

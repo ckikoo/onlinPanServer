@@ -1,4 +1,4 @@
-package api
+package admin
 
 import (
 	"encoding/json"
@@ -9,18 +9,19 @@ import (
 	"onlineCLoud/internel/app/service"
 	"onlineCLoud/pkg/contextx"
 
+	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 )
 
-type LoginAPI struct {
+type AdminLoginAPI struct {
 	LoginSrv *service.LoginSrv
 }
 
-func (a *LoginAPI) formatTokenUserID(userID string, userName string, admin bool) string {
-	return fmt.Sprintf("%s %s %v", userID, userName, admin)
+func (a *AdminLoginAPI) formatTokenUserID(userID string, userName string) string {
+	return fmt.Sprintf("%s %s %d", userID, userName, 1)
 }
 
-func (a *LoginAPI) Login(c *gin.Context) {
+func (a *AdminLoginAPI) Login(c *gin.Context) {
 	ctx := c.Request.Context()
 	var item user.User
 	if err := ginx.ParseForm(c, &item); err != nil {
@@ -33,42 +34,20 @@ func (a *LoginAPI) Login(c *gin.Context) {
 		ginx.ResFailWithMessage(c, "验证码错误")
 		return
 	}
-	user_id, err := a.LoginSrv.Login(ctx, item.Email, item.Password, false)
+	user_id, err := a.LoginSrv.Login(ctx, item.Email, item.Password, true)
 
 	if err != nil {
 		ginx.ResFailWithMessage(c, err.Error())
 		return
 	}
 
-	tokenMap, _ := a.LoginSrv.GenerateToken(ctx, a.formatTokenUserID(user_id, item.Email, false))
+	tokenMap, _ := a.LoginSrv.GenerateToken(ctx, a.formatTokenUserID(user_id, item.Email))
 	v, _ := json.Marshal(tokenMap)
-
+	fmt.Printf("v: %v\n", v)
 	ginx.ResOkWithData(c, string(v))
 }
 
-func (a *LoginAPI) Register(c *gin.Context) {
-	ctx := c.Request.Context()
-	var item user.User
-	if err := ginx.ParseForm(c, &item); err != nil {
-		ginx.ResFailWithMessage(c, "数据错误")
-		return
-	}
-
-	ok, err := a.LoginSrv.Register(ctx, item)
-
-	if err != nil {
-		ginx.ResFailWithMessage(c, err.Error())
-		return
-	} else if !ok {
-		ginx.ResFailWithMessage(c, "注册失败")
-		return
-	} else {
-		ginx.ResOkWithMessage(c, "注册成功")
-	}
-
-}
-
-func (a *LoginAPI) ResetPasswd(c *gin.Context) {
+func (a *AdminLoginAPI) ResetPasswd(c *gin.Context) {
 	ctx := c.Request.Context()
 	email := c.PostForm("email")
 	password := c.PostForm("password")
@@ -104,15 +83,19 @@ func (a *LoginAPI) ResetPasswd(c *gin.Context) {
 
 }
 
-func (a *LoginAPI) Logout(c *gin.Context) {
+func (a *AdminLoginAPI) Logout(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	userEmail := contextx.FromUserEmail(ctx)
 	if userEmail != "" {
 		_ = a.LoginSrv.DestoryToken(ctx, ginx.GetToken(c))
 	}
+
 	c.SetCookie("userinfo", "", -1, "/", "localhost", false, true)
 	c.SetCookie("jwt_token", "", -1, "/", "localhost", false, true)
+	session := sessions.Default(c)
+	session.Delete("pri")
+	session.Save()
 
 	ginx.ResOk(c)
 }

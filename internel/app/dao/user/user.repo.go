@@ -94,13 +94,13 @@ func (a *UserRepo) Create(ctx context.Context, item *User) error {
 	return nil
 }
 
-func (a *UserRepo) Update(ctx context.Context, id uint64, item User) error {
+func (a *UserRepo) Update(ctx context.Context, id string, item User) error {
 
 	result := GetUserDB(ctx, a.DB).Where("id=?", id).Updates(item)
 	return errors.WithStack(result.Error)
 }
 
-func (a *UserRepo) Delete(ctx context.Context, id uint64) error {
+func (a *UserRepo) Delete(ctx context.Context, id string) error {
 	result := GetUserDB(ctx, a.DB).Where("id=?", id).Delete(User{})
 	return errors.WithStack(result.Error)
 }

@@ -60,6 +60,7 @@ type Config struct {
 	HTTP        HTTP
 	JWTAuth     JWTAuth
 	Captcha     Captcha
+	Download    Download
 	RateLimiter RateLimiter
 	CORS        CORS
 	Email       Email
@@ -69,10 +70,14 @@ type Config struct {
 	GZIP        GZIP
 	File        File
 }
-
-type File struct {
-	DefaultSpace uint64
+type Download struct {
+	Limit uint64
 }
+type File struct {
+	InitSpaceSize uint64
+	FileUploadDir string
+}
+
 type Email struct {
 	Host     string
 	Port     string

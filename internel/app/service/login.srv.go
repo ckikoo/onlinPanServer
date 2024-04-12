@@ -24,7 +24,7 @@ func (a *LoginSrv) FindOneByName(ctx context.Context, username string) *user.Use
 	return &item
 }
 
-func (a *LoginSrv) Login(ctx context.Context, username, password string) (string, error) {
+func (a *LoginSrv) Login(ctx context.Context, username, password string, isadmin bool) (string, error) {
 
 	var item user.User
 	err := a.UserRepo.FindOneByName(ctx, username, &item)
@@ -36,6 +36,8 @@ func (a *LoginSrv) Login(ctx context.Context, username, password string) (string
 		return "", errors.New("用户已被禁用，请联系客服申请解禁")
 	} else if item.Password == "" {
 		return "", errors.New("用户不存在")
+	} else if isadmin && !item.Admin {
+		return "", errors.New("用户非管理员权限")
 	}
 
 	m := make(map[string]interface{}, 0)
@@ -49,7 +51,10 @@ func (a *LoginSrv) Login(ctx context.Context, username, password string) (string
 		fmt.Printf("err: %v\n", err)
 		return "", err
 	}
-	return item.UserID, nil
+	item.LastJoinTime = time.Now()
+	err = a.UserRepo.Update(ctx, item.UserID, item)
+
+	return item.UserID, err
 }
 
 func (a *LoginSrv) Register(ctx context.Context, User user.User) (bool, error) {
@@ -63,7 +68,7 @@ func (a *LoginSrv) Register(ctx context.Context, User user.User) (bool, error) {
 		User.UserID = uuid.MustString()
 		User.LastJoinTime = time.Now()
 		User.CreateTime = User.LastJoinTime
-		User.TotalSpace = config.C.File.DefaultSpace
+		User.TotalSpace = config.C.File.InitSpaceSize
 		User.Status = 1
 		fmt.Printf("User: %v\n", User)
 		err := a.UserRepo.Create(ctx, &User)

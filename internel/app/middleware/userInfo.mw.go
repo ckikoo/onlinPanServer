@@ -10,10 +10,11 @@ import (
 )
 
 // TODO: ADD support admin
-func wrapUserAuthContext(c *gin.Context, userID string, email string, admin ...bool) {
+func wrapUserAuthContext(c *gin.Context, userID string, email string, admin string) {
 	ctx := contextx.NewUserEmail(c.Request.Context(), email)
 	ctx = contextx.NewUserID(ctx, userID)
 	ctx = contextx.NewUUID(ctx)
+	ctx = contextx.NewAdmin(ctx, admin)
 	c.Request = c.Request.WithContext(ctx)
 }
 
@@ -39,15 +40,15 @@ func UserInfo(a auth.Auther) gin.HandlerFunc {
 			return
 		}
 
-		idx := strings.Index(tokenUserEmain, " ")
-		if idx == -1 {
+		info := strings.Split(tokenUserEmain, " ")
+		if len(info) == 0 {
 			wrapMIddleReason(ctx, "请重新登录")
 			ctx.Next()
 			return
 		}
 
-		userID := tokenUserEmain[:idx]
-		wrapUserAuthContext(ctx, userID, tokenUserEmain[idx+1:])
+		userID := info[0]
+		wrapUserAuthContext(ctx, userID, info[1], info[2])
 		ctx.Next()
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"onlineCLoud/internel/app/config"
 	"onlineCLoud/internel/app/dao/dto"
 	"onlineCLoud/internel/app/dao/redisx"
 	"onlineCLoud/internel/app/ginx"
@@ -265,7 +266,7 @@ func (api *WebShareApi) Download(c *gin.Context) {
 
 	limitedReader := &RateLimitedReader{
 		R:     reader,
-		Limit: 1024 * 1024,
+		Limit: int64(config.C.Download.Limit) * 1024,
 	}
 	c.Header("Content-Length", fmt.Sprintf("%d", dto.FileSize))
 	c.Writer.Header().Set("Content-Type", "application/octet-stream")
