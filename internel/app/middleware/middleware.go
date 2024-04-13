@@ -8,6 +8,7 @@ import (
 
 	"strings"
 
+	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 )
 
@@ -28,14 +29,18 @@ func AllowAdminSkipper(prefix ...string) SkipperFunc {
 	return func(ctx *gin.Context) bool {
 		path := ctx.Request.URL.Path
 		pathLen := len(path)
+		session := sessions.Default(ctx)
+		isAdmin := session.Get("pri").(string)
 
 		for _, p := range prefix {
 			if p1 := len(p); pathLen >= p1 && path[:p1] == p {
 				admin := contextx.GetAdmin(ctx.Request.Context())
-				return admin == "1" && true
+				fmt.Printf("admin: %v\n", admin)
+				if admin == "true" && isAdmin == "admin" {
+					return true
+				}
 			}
 		}
-
 		return false
 	}
 }

@@ -17,14 +17,14 @@ func AuthMiddleware(a auth.Auther, skipper SkipperFunc, admin SkipperFunc) gin.H
 		}
 
 		if contextx.FromMiddle(ctx.Request.Context()) != "" {
-			ginx.ResFailWithMessage(ctx, contextx.FromMiddle(ctx.Request.Context()))
+			ginx.ResNeedReload(ctx)
 			ctx.Abort()
-
 			return
 		}
 
-		if SkipHandler(ctx, admin) {
-			ctx.Next()
+		if !SkipHandler(ctx, admin) {
+			ginx.ResNeedReload(ctx)
+			ctx.Abort()
 			return
 		}
 

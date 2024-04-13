@@ -41,9 +41,13 @@ func (a *AdminLoginAPI) Login(c *gin.Context) {
 		return
 	}
 
+	session := sessions.Default(c)
+	session.Set("pri", "admin")
+	session.Save()
+
 	tokenMap, _ := a.LoginSrv.GenerateToken(ctx, a.formatTokenUserID(user_id, item.Email))
 	v, _ := json.Marshal(tokenMap)
-	fmt.Printf("v: %v\n", v)
+
 	ginx.ResOkWithData(c, string(v))
 }
 
