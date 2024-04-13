@@ -25,6 +25,8 @@ type Router struct {
 	AdminLoginApi *admin.AdminLoginAPI
 	WebShareApi   *api.WebShareApi
 	EncAPI        *api.EncAPI
+	WorkOrder     *api.WorkOrderApi
+	AdminOrder    *admin.AdminOrderApi
 }
 
 func (a *Router) Regitser(app *gin.Engine) error {
@@ -121,4 +123,9 @@ func (a *Router) RegisterApI(app *gin.Engine) {
 	g.POST("/enc/delFile", a.EncAPI.DelFile)
 	g.POST("/enc/recoverFile", a.EncAPI.RecoverFile)
 
+	g.POST("/workOrder/create", a.WorkOrder.Create)
+	g.POST("/workOrder/get", a.WorkOrder.LoadWorkList)
+	g.POST("/admin/workOrder/get", a.AdminOrder.LoadWorkList)
+	g.POST("/workOrder/update", a.WorkOrder.Update)
+	g.POST("/admin/workOrder/update", a.AdminOrder.Update)
 }

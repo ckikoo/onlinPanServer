@@ -5,6 +5,7 @@ import (
 	"onlineCLoud/internel/app/api"
 	"onlineCLoud/internel/app/api/admin"
 	"onlineCLoud/internel/app/dao/file"
+	workOrder "onlineCLoud/internel/app/dao/gongdan"
 	"onlineCLoud/internel/app/dao/mailx"
 	"onlineCLoud/internel/app/dao/redisx"
 	"onlineCLoud/internel/app/dao/share"
@@ -98,7 +99,21 @@ func BuildInjector() (*Injector, func(), error) {
 		ShareSrv: &ShareSrv,
 		FileSrv:  &FileSrv,
 	}
+	work := api.WorkOrderApi{
+		Srv: service.WorkOrderSrv{
+			Repo: &workOrder.WorkOrderRepo{
+				DB: db,
+			},
+		},
+	}
 
+	AdminOrder := admin.AdminOrderApi{
+		Srv: &service.WorkOrderSrv{
+			Repo: &workOrder.WorkOrderRepo{
+				DB: db,
+			},
+		},
+	}
 	routerRouter := &router.Router{
 		Auth:          auther,
 		LoginAPI:      &loginApi,
@@ -110,6 +125,8 @@ func BuildInjector() (*Injector, func(), error) {
 		AdminApi:      &AdminApi,
 		WebShareApi:   &WebShareApi,
 		EncAPI:        &EncApi,
+		WorkOrder:     &work,
+		AdminOrder:    &AdminOrder,
 	}
 
 	go func() {

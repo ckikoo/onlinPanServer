@@ -96,7 +96,7 @@ func (a *UserRepo) Create(ctx context.Context, item *User) error {
 
 func (a *UserRepo) Update(ctx context.Context, id string, item User) error {
 
-	result := GetUserDB(ctx, a.DB).Where("id=?", id).Updates(item)
+	result := GetUserDB(ctx, a.DB).Where("user_id=?", id).Updates(item)
 	return errors.WithStack(result.Error)
 }
 

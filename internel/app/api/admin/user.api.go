@@ -27,15 +27,18 @@ func (a *AdminApi) LoadUserList(c *gin.Context) {
 	PageNo, err := strconv.ParseInt(pageNo, 10, 64)
 	if err != nil {
 		ginx.ResFail(c)
+		return
 	}
 	PageSize, err := strconv.ParseInt(pageSize, 10, 64)
 	if err != nil {
 		ginx.ResFail(c)
+		return
 	}
 
 	res, err := a.AdminSrv.LoadUserList(ctx, int(PageNo), int(PageSize), nickNameFuzzy, status)
 	if err != nil {
 		ginx.ResFail(c)
+		return
 	}
 
 	ginx.ResOkWithData(c, res)
@@ -56,11 +59,9 @@ func (a *AdminApi) SaveSysSettings(c *gin.Context) {
 	downloadLimitStr := c.PostForm("downloadLimit")
 	userInitUseSpaceStr := c.PostForm("userInitUseSpace")
 
-	// 将 downloadLimit 转换为整数类型
 	downloadLimit, err := strconv.Atoi(downloadLimitStr)
 	if err != nil {
-		// 错误处理：如果无法转换为整数，返回错误信息
-		// 这里你可以根据实际需求返回相应的错误信息
+
 		ginx.ResFailWithMessage(c, "nvalid download limit")
 		return
 	}
@@ -68,15 +69,13 @@ func (a *AdminApi) SaveSysSettings(c *gin.Context) {
 	// 将 userInitUseSpace 转换为布尔类型
 	userInitUseSpace, err := strconv.Atoi(userInitUseSpaceStr)
 	if err != nil {
-		// 错误处理：如果无法解析为布尔值，返回错误信息
-		// 这里你可以根据实际需求返回相应的错误信息
+
 		ginx.ResFailWithMessage(c, "nvalid userInitUseSpace value")
 		return
 	}
 	capLength, err := strconv.Atoi(captchaLength)
 	if err != nil {
-		// 错误处理：如果无法解析为布尔值，返回错误信息
-		// 这里你可以根据实际需求返回相应的错误信息
+
 		ginx.ResFailWithMessage(c, "nvalid userInitUseSpace value")
 		return
 	}

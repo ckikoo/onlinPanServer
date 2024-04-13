@@ -12,11 +12,14 @@ type AdminSrv struct {
 	FileRepo *file.FileRepo
 }
 
-func (a *AdminSrv) LoadUserList(ctx context.Context, pageNo int, pageSize int, nickNameFuzzy, status string) (schema.ListResult, error) {
+func (a *AdminSrv) LoadUserList(ctx context.Context, pageNo int, pageSize int, nickNameFuzzy, status string) (*schema.ListResult, error) {
 
 	q := schema.PageParams{PageNo: pageNo, PageSize: pageSize}
 
 	userList, err := a.UserRepo.LoadUserList(ctx, &q, nickNameFuzzy, status)
+	if err != nil {
+		return nil, err
+	}
 
 	for i, v := range userList {
 		v.Avatar = ""
@@ -25,7 +28,7 @@ func (a *AdminSrv) LoadUserList(ctx context.Context, pageNo int, pageSize int, n
 
 	total, err := a.UserRepo.GetUserListTotal(ctx, &q, nickNameFuzzy, status)
 
-	res := schema.ListResult{}
+	res := new(schema.ListResult)
 	res.PageTotal = (total + int64(pageSize)/2) / int64(pageSize)
 	res.Parms = &schema.PageParams{
 		PageNo:   pageNo,

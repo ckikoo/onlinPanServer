@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"onlineCLoud/internel/app/ginx"
 	"onlineCLoud/pkg/auth"
 	"onlineCLoud/pkg/contextx"
@@ -47,7 +48,10 @@ func UserInfo(a auth.Auther) gin.HandlerFunc {
 			return
 		}
 
+		fmt.Printf("info: %v\n", info)
+
 		userID := info[0]
+
 		wrapUserAuthContext(ctx, userID, info[1], info[2])
 		ctx.Next()
 	}

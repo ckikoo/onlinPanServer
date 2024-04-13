@@ -10,6 +10,7 @@ type (
 	userEmailCtx struct{}
 	uuidCtx      struct{}
 	middileCtx   struct{}
+	AdminCtx     struct{}
 )
 
 func NewMiddle(ctx context.Context, reason string) context.Context {
@@ -52,11 +53,11 @@ func FromUserID(ctx context.Context) string {
 	return ""
 }
 func NewAdmin(ctx context.Context, admin string) context.Context {
-	return context.WithValue(ctx, userIDCtx{}, admin)
+	return context.WithValue(ctx, AdminCtx{}, admin)
 }
 
 func GetAdmin(ctx context.Context) string {
-	v := ctx.Value(userIDCtx{})
+	v := ctx.Value(AdminCtx{})
 	if v != nil {
 		if s, ok := v.(string); ok {
 			return s
