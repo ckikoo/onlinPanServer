@@ -178,7 +178,7 @@ func (hdfs *HdfsClient) AppendFile(filename string, content string) error {
 }
 
 func (hdfs *HdfsClient) DeleteFile(path string) error {
-	err := hdfs.client.Remove(path)
+	err := hdfs.client.RemoveAll(path)
 	if err != nil {
 		return err
 	}

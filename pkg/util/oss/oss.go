@@ -1,6 +1,7 @@
 package ossUtil
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -73,4 +74,42 @@ func (oss *OssClient) Get(filepath string) (io.ReadCloser, error) {
 	}
 
 	return rc, nil
+}
+
+// 删除当前目录,以及子目录
+func (cleint *OssClient) DeleteDir(dir string) error {
+
+	marker := oss.Marker("")
+	objectsDeleted := 0
+	for {
+		lor, err := cleint.bucket.ListObjects(marker, oss.Prefix(dir))
+		if err != nil {
+			return err
+		}
+
+		keys := []string{}
+		for _, object := range lor.Objects {
+			keys = append(keys, object.Key)
+		}
+
+		delRes, err := cleint.bucket.DeleteObjects(keys)
+		if err != nil {
+			return err
+		}
+
+		if len(delRes.DeletedObjects) > 0 {
+			fmt.Println("These objects were not deleted successfully:", delRes.DeletedObjects)
+			return errors.New("文件删除不完全")
+		}
+
+		objectsDeleted += len(keys)
+
+		marker = oss.Marker(lor.NextMarker)
+		if !lor.IsTruncated {
+			break
+		}
+	}
+
+	fmt.Printf("Successfully deleted %d objects with prefix '%s'\n", objectsDeleted, dir)
+	return nil
 }

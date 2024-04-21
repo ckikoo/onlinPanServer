@@ -298,6 +298,15 @@ func (api *WebShareApi) SaveShare(c *gin.Context) {
 		return
 	}
 
+	// 文件防护   ----->>
+
+	// fileIds := strings.Split(shareFileIds, ",")
+
+	// for _.id := range fileIds {
+
+	// 	api.FileSrv.CheckFootFilePid(ctx, session.FileId, session.ShareUserId)
+	// }
+
 	err := api.FileSrv.SaveShare(ctx, session.FileId, shareFileIds, myFolderId, session.ShareUserId, currentUser)
 	if err != nil {
 		ginx.ResFailWithMessage(c, err.Error())

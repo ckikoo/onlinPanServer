@@ -24,9 +24,7 @@ func (a *UserAPI) GetInfo(c *gin.Context) {
 		ginx.ResFailWithMessage(c, "获取用户信息失败")
 		return
 	}
-
 	ginx.ResOkWithData(c, item)
-
 }
 
 func (a *UserAPI) UpdateUserAvatar(c *gin.Context) {

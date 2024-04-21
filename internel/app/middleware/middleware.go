@@ -27,16 +27,29 @@ type SkipperFunc func(*gin.Context) bool
 
 func AllowAdminSkipper(prefix ...string) SkipperFunc {
 	return func(ctx *gin.Context) bool {
+
 		path := ctx.Request.URL.Path
+		fmt.Printf("path: %v\n", path)
 		pathLen := len(path)
+		adminPrex := "/api/admin"
+		adminLen := len(adminPrex)
+		if pathLen < adminLen {
+			return true
+		}
+
+		//  排除前缀不属于的
+		if path[:adminLen] != adminPrex {
+			return true
+		}
+
 		session := sessions.Default(ctx)
 		isAdmin := session.Get("pri").(string)
 
 		for _, p := range prefix {
-			if p1 := len(p); pathLen >= p1 && path[:p1] == p {
+			if p1 := len(p); pathLen >= p1 {
 				admin := contextx.GetAdmin(ctx.Request.Context())
 				fmt.Printf("admin: %v\n", admin)
-				if admin == "true" && isAdmin == "admin" {
+				if admin == "1" && isAdmin == "admin" {
 					return true
 				}
 			}

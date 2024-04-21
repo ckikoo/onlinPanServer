@@ -54,8 +54,11 @@ func (a *Router) RegisterApI(app *gin.Engine) {
 			"/api/resetPwd", "/api/file/download/",
 			"/api/getAvatar",
 			"/api/showShare",
-		), func(ctx *gin.Context) bool { return true }))
-	g.Use(middleware.AuthMiddleware(a.Auth, func(ctx *gin.Context) bool { return false }, middleware.AllowAdminSkipper("/api/admin")))
+		)))
+
+	g.Use(middleware.AuthMiddleware(a.Auth, middleware.AllowAdminSkipper("/api/admin"),
+		middleware.AllowPathPrefixSkipper("/api/admin/login", "/api/admin/resetPwd")))
+
 	g.Use(middleware.CORSMiddleware())
 	g.POST("/admin/login", a.AdminLoginApi.Login)
 	g.POST("/admin/logout", a.AdminLoginApi.Logout)

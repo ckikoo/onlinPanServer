@@ -9,20 +9,14 @@ import (
 )
 
 // 校验用户新的中间层
-func AuthMiddleware(a auth.Auther, skipper SkipperFunc, admin SkipperFunc) gin.HandlerFunc {
+func AuthMiddleware(a auth.Auther, skipper ...SkipperFunc) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		if SkipHandler(ctx, skipper) {
+		if SkipHandler(ctx, skipper...) {
 			ctx.Next()
 			return
 		}
 
 		if contextx.FromMiddle(ctx.Request.Context()) != "" {
-			ginx.ResNeedReload(ctx)
-			ctx.Abort()
-			return
-		}
-
-		if !SkipHandler(ctx, admin) {
 			ginx.ResNeedReload(ctx)
 			ctx.Abort()
 			return

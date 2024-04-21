@@ -96,20 +96,6 @@ func (f *FileRepo) GetFileListTotal(ctx context.Context, uid string, schema *sch
 	return total, err
 }
 
-func (f *FileRepo) CheckFileExists(ctx context.Context, md5 string) (*File, error) {
-
-	db := GetFileDB(ctx, f.Db)
-	db = db.Where("file_md5 =?", md5)
-
-	var file File
-	err := db.First(&file).Error
-	if err != nil && err != gorm.ErrRecordNotFound {
-		return nil, err
-	}
-	return &file, nil
-
-}
-
 func (f *FileRepo) UploadFile(ctx context.Context, file *File) error {
 	err := GetFileDB(ctx, f.Db).Create(file).Error
 	if err != nil {
@@ -135,7 +121,6 @@ func (f *FileRepo) DelFiles(ctx context.Context, uid string, fileId []string) er
 	db := GetFileDB(ctx, f.Db)
 
 	return db.Where("user_id=?", uid).Delete("file_id in (?)", fileId).Error
-
 }
 func (f *FileRepo) GetFileInfo(ctx context.Context, fileId string, uid string) (*File, error) {
 	db := GetFileDB(ctx, f.Db)
@@ -170,6 +155,28 @@ func (f *FileRepo) CheckFileName(ctx context.Context, filePId string, uid string
 	}
 	return &file, nil
 }
+
+func (f *FileRepo) CountFileByMd5(ctx context.Context, md5 string) (int64, error) {
+	var count int64
+
+	db := GetFileDB(ctx, f.Db)
+
+	db = db.Where(File{
+		FileMd5: md5,
+	})
+
+	if err := db.Count(&count).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return 0, nil
+		} else {
+			return 0, err
+
+		}
+	}
+
+	return count, nil
+}
+
 func (f *FileRepo) GetFileByMd5(ctx context.Context, md5 string) (*File, error) {
 	db := GetFileDB(ctx, f.Db)
 

@@ -220,12 +220,16 @@ func (srv *FileSrv) UploadFile(c *gin.Context, uid string, fileinfo schema.FileU
 		if file.FileType == define.FileTypeVideo {
 			CutFile4Video(fileid, file.FilePath) // 文件切片
 			dest := fmt.Sprintf("%s/%s", uploadDir, file.FileMd5+".png")
-			CreateCover4Video(file.FilePath, 150, dest)
+			go func() {
+				CreateCover4Video(file.FilePath, 150, dest)
+			}()
 			file.FileCover = fmt.Sprintf("%v", file.FileMd5+".png")
 		} else if file.FileType == define.FileTypeImage {
 			//生成缩略图
 			dest := fmt.Sprintf("%s/%s", uploadDir, file.FileMd5+".png")
-			CreateCover4Video(file.FilePath, 150, dest)
+			go func() {
+				CreateCover4Video(file.FilePath, 150, dest)
+			}()
 			file.FileCover = fmt.Sprintf("%v", file.FileMd5+".png")
 		}
 		if err := srv.Repo.UploadFile(c, &file); err != nil {
@@ -243,29 +247,35 @@ func (srv *FileSrv) UploadFile(c *gin.Context, uid string, fileinfo schema.FileU
 			statusMap["satus"] = FILE_STATUS_TRANSFER_FAIL
 			return statusMap, nil
 		}
-		client, err := hdfsUtil.NewClient("172.20.0.2:9000")
-		if err != nil {
-			statusMap["satus"] = FILE_STATUS_TRANSFER_FAIL
-			return statusMap, nil
-		}
-		fmt.Printf("uploadDir: %v\n", uploadDir)
-		err = client.CopyDirFromLocal(uploadDir, "/"+uploadDir)
-		if err != nil {
-			statusMap["satus"] = FILE_STATUS_TRANSFER_FAIL
-			return statusMap, nil
-		}
 
-		ossClient, err := ossUtil.NewClient()
-		if err != nil {
-			statusMap["satus"] = FILE_STATUS_TRANSFER_FAIL
-			return statusMap, nil
-		}
+		go func() {
+			client, err := hdfsUtil.NewClient("172.20.0.2:9000")
+			if err != nil {
+				log.Default().Printf("error  hdfsUtil newclient error :%v \n", err)
+				return
+			}
 
-		err = ossClient.CopyDirFromLocal(uploadDir, uploadDir)
-		if err != nil {
-			statusMap["satus"] = FILE_STATUS_TRANSFER_FAIL
-			return statusMap, nil
-		}
+			err = client.CopyDirFromLocal(uploadDir, "/"+uploadDir)
+			if err != nil {
+				log.Default().Printf("error hdfsUtil CopyDirFromLocal %v to %v err: %v\n", uploadDir, "/"+uploadDir, err)
+				return
+			}
+		}()
+
+		go func() {
+			ossClient, err := ossUtil.NewClient()
+			if err != nil {
+				log.Default().Printf("error  ossUtil newclient error: %v\n", err)
+				return
+			}
+
+			err = ossClient.CopyDirFromLocal(uploadDir, uploadDir)
+			if err != nil {
+				log.Default().Printf("error ossUtil CopyDirFromLocal %v to %v error %v\n", uploadDir, "/"+uploadDir, err)
+				return
+			}
+		}()
+
 	}
 
 	return statusMap, nil
@@ -274,6 +284,7 @@ func (srv *FileSrv) UploadFile(c *gin.Context, uid string, fileinfo schema.FileU
 func CutFile4Video(fileId, videoFilePath string) error {
 	path, err := fileUtil.NewDir(videoFilePath[:strings.LastIndex(videoFilePath, "/")])
 	if err != nil {
+
 		log.Printf("cutfile4video error creating video folder: %s", err)
 		return err
 	}
@@ -349,7 +360,6 @@ func (f *FileSrv) findAllSubFolderFileIdList(ctx context.Context, fileIdList *[]
 	for _, v := range fields {
 		f.findAllSubFolderFileIdList(ctx, fileIdList, userID, v.FileID, delflag)
 	}
-
 }
 
 func (f *FileSrv) DelFiles(ctx context.Context, uid string, fileId string) error {
@@ -368,9 +378,28 @@ func (f *FileSrv) DelFiles(ctx context.Context, uid string, fileId string) error
 	delFileList := make([]string, 0)
 	//TODO fix
 
+	//文件删除 应该标志
 	for _, e := range fileInfoList {
 		go func() {
 			f.Timer.Add("file_"+e.FileID+e.UserID, time.Now().Add(time.Hour*24*10), func() {
+				//  记录数量
+				count, err := f.Repo.CountFileByMd5(ctx, e.FileMd5)
+				if err != nil {
+					// 记录日志  /// --->>>
+					log.Default().Println("[error] ", err)
+					return
+				}
+				if count == 0 {
+					// 错误日志    md5数据有无
+					log.Default().Println("[error] ", "文件md5 不存在", e.FileMd5)
+
+				}
+
+				// 如果当前文件
+				if count == 1 {
+					ossUtil.NewClient()
+				}
+
 				f.Repo.DelFiles(ctx, e.UserID, []string{e.FileID})
 			})
 		}()
@@ -394,6 +423,7 @@ func (f *FileSrv) DelFiles(ctx context.Context, uid string, fileId string) error
 	return nil
 }
 
+// 创建视频封面
 func CreateCover4Video(path string, width int, desc string) error {
 	cmd := exec.Command("/usr/bin/ffmpeg", "-i", path, "-y", "-vframes", "1", "-vf", fmt.Sprintf("scale=%d:%d", width, width), desc)
 	cmd.Stderr = os.Stderr
@@ -598,45 +628,52 @@ func (f *FileSrv) ChangeFileFolder(ctx context.Context, uid string, fileIds stri
 	return nil
 }
 
-// TODO
+// 校验文件   // 防止文件跳跃访问      //   环境变量          分享的根目录   用户id   当前文件id
 func (f *FileSrv) CheckFootFilePid(ctx context.Context, rootFilePid, userId, fileId string) error {
-	if len(fileId) == 0 {
-		return errors.New("")
+	fmt.Println("-------------------------------------------------")
+	fmt.Printf("rootFilePid: %v\n", rootFilePid)
+
+	if len(rootFilePid) == 0 || len(fileId) == 0 { // 文件id 非法参数
+		return errors.New("非法参数")
 	}
-	if rootFilePid == fileId {
+
+	if rootFilePid == fileId { // 检验
 		return nil
 	}
 
 	return f.checkFilePid(ctx, rootFilePid, userId, fileId)
-
 }
 
+// 反响时间最大O(n) 复杂度
 func (f *FileSrv) checkFilePid(ctx context.Context, rootFilePid, userId, fileId string) error {
-	fileInfo, err := f.Repo.GetFileInfo(ctx, fileId, userId)
+	fileInfo, err := f.Repo.GetFileInfo(ctx, fileId, userId) // TODO 待优化
 	if err != nil {
 		return err
 	}
 
 	if fileInfo == nil {
-		return errors.New("")
+		return errors.New("文件信息不存在")
 	}
 
 	if fileInfo.FileID == "0" {
-		return errors.New("")
+		return errors.New("非法参数")
 	}
 
 	if fileInfo.FilePid == rootFilePid {
 		return nil
 	}
-	return f.checkFilePid(ctx, rootFilePid, fileInfo.FilePid, userId)
+	return f.checkFilePid(ctx, rootFilePid, userId, fileInfo.FilePid)
 }
 
 func (f *FileSrv) SaveShare(ctx context.Context,
 	shareRootFilePid,
 	shareFileIds, myFolderId,
 	shareUserId, currentUserId string) error {
+
 	shareFileIdArray := strings.Split(shareFileIds, ",")
 	fmt.Printf("shareFileIdArray: %v\n", shareFileIdArray)
+
+	// 获取当前文件 列表
 	query := new(schema.RequestFileListPage)
 	query.FilePid = myFolderId
 	query.DelFlag = define.FileFlagInUse
@@ -647,10 +684,13 @@ func (f *FileSrv) SaveShare(ctx context.Context,
 	fmt.Printf("currentFileList: %v\n", currentFileList)
 	currentFileMap := make(map[string]file.File, 0)
 
+	// 建立一个map 以文件名作为映射
 	for _, info := range currentFileList {
 		currentFileMap[info.FileName] = info
 	}
 	fmt.Printf("currentFileMap: %v\n", currentFileMap)
+
+	// 获取当前路径下分享文件列表
 	query = new(schema.RequestFileListPage)
 	query.Path = shareFileIdArray
 	query.DelFlag = define.FileFlagInUse
@@ -658,19 +698,20 @@ func (f *FileSrv) SaveShare(ctx context.Context,
 	if err != nil {
 		return err
 	}
+
 	fmt.Printf("shareFileList: %v\n", shareFileList)
 	fileList := make([]file.File, 0)
-	currentTime := time.Now().Format("2006-01-02 15:04:05")
-	for _, info := range shareFileList {
-
-		if _, ok := currentFileMap[info.FileName]; ok {
-			fileNewName := fileUtil.Rename(info.FileName)
+	currentTime := time.Now().Format("2006-01-02 15:04:05") // 获取当前的时间
+	for _, info := range shareFileList {                    // 便利分享的文件列表
+		if _, ok := currentFileMap[info.FileName]; ok { //  检查对应的文件名是否存在
+			fileNewName := fileUtil.Rename(info.FileName) // 文件重命令
 			info.FileName = fileNewName
 		}
-		f.findAllSubFileList(ctx, &fileList, info, shareUserId, currentUserId, currentTime, myFolderId)
+		f.findAllSubFileListAndChange(ctx, &fileList, info, shareUserId, currentUserId, currentTime, myFolderId) // 递归 copy  分享文件下的子目录
 	}
-	for _, file := range fileList {
-		if err := f.Repo.UploadFile(ctx, &file); err != nil {
+
+	for _, file := range fileList { // 文件列表
+		if err := f.Repo.UploadFile(ctx, &file); err != nil { // 调用接口保存文件信息  // --- 数据一致性问题  --应该支持回滚操纵
 			return err
 		}
 
@@ -678,8 +719,10 @@ func (f *FileSrv) SaveShare(ctx context.Context,
 	return nil
 }
 
-func (f *FileSrv) findAllSubFileList(ctx context.Context, copyFileList *[]file.File, fileInfo file.File, sourceUserId, currentUserID, curentTime string, newFilePid string) {
+// 找出当前分享文件下
+func (f *FileSrv) findAllSubFileListAndChange(ctx context.Context, copyFileList *[]file.File, fileInfo file.File, sourceUserId, currentUserID, curentTime string, newFilePid string) {
 
+	// 修改文件信息
 	sourceFileId := fileInfo.FileID
 	fileInfo.CreateTime = curentTime
 	fileInfo.LastUpdateTime = curentTime
@@ -687,8 +730,8 @@ func (f *FileSrv) findAllSubFileList(ctx context.Context, copyFileList *[]file.F
 	fileInfo.FileID = util.MustString()
 	fileInfo.UserID = currentUserID
 
-	*copyFileList = append(*copyFileList, fileInfo)
-	if fileInfo.FileType == define.FileTypeFolder {
+	*copyFileList = append(*copyFileList, fileInfo) // 文件信息 放入数组里
+	if fileInfo.FileType == define.FileTypeFolder { // 当前文件是目录  递归
 		query := schema.RequestFileListPage{
 			FilePid: sourceFileId,
 			DelFlag: define.FileFlagInUse,
@@ -700,17 +743,19 @@ func (f *FileSrv) findAllSubFileList(ctx context.Context, copyFileList *[]file.F
 		}
 
 		for _, file := range list {
-			f.findAllSubFileList(ctx, copyFileList, file, sourceUserId, currentUserID, curentTime, fileInfo.FileID)
+			f.findAllSubFileListAndChange(ctx, copyFileList, file, sourceUserId, currentUserID, curentTime, fileInfo.FileID)
 		}
 	}
 
 }
 
+// 取消文件上传
 func (srv *FileSrv) CancelUpload(ctx context.Context, uid string, fileid string) error {
-	path := fmt.Sprintf("temp/%v/%v", uid, fileid)
+	path := fmt.Sprintf("temp/%v/%v", uid, fileid) //  取消上传机制
 	return os.RemoveAll(path)
 }
 
+// 文件加入密码箱
 func (srv *FileSrv) UpdateFileSecure(ctx context.Context, uid string, fileid string, status bool) error {
 	fileids := strings.Split(fileid, ",")
 	return srv.Repo.UpdateFileSecure(ctx, uid, fileids, status)
