@@ -22,6 +22,7 @@ type Cache interface {
 	Get(filePath string) (*file.AbstractFile, error)
 	Put(filePath string, content io.Reader) error
 	Truncate(filepath string) error
+	Delete(filePath string) error
 }
 
 func NewCacheReader(filePath string) *CacheReader {
@@ -100,4 +101,24 @@ func (cr *CacheReader) Read() (*file.AbstractFile, error) {
 	}
 
 	return nil, errors.New("file not found in any cache")
+}
+
+func (cr *CacheReader) Delete(filePath string) error {
+
+	for i, do := range cr.Caches {
+		if i == 1 {
+			if err := do.Delete("/" + filePath); err != nil {
+				// 记录日志
+				continue
+			}
+		} else {
+			if err := do.Delete(filePath); err != nil {
+				// 记录日志
+				continue
+			}
+		}
+
+	}
+
+	return nil
 }

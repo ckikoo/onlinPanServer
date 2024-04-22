@@ -52,3 +52,7 @@ func (oc *OssCache) Truncate(filepath string) error {
 
 	return nil
 }
+
+func (oc *OssCache) Delete(filePath string) error {
+	return oc.client.DeleteDir(filePath)
+}

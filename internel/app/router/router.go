@@ -81,6 +81,7 @@ func (a *Router) RegisterApI(app *gin.Engine) {
 	g.POST("/updatePassword", a.UserApi.UpdatePassword)
 	g.GET("/getAvatar/:user", a.UserApi.GetUserAvatar)
 
+	// 文件模块
 	g.POST("/file/loadDataList", a.FileApi.GetFileList)
 	g.POST("/file/uploadFile", a.FileApi.UploadFile)
 	g.POST("/file/cancelUploadFile", a.FileApi.CancelUpload)
@@ -97,14 +98,17 @@ func (a *Router) RegisterApI(app *gin.Engine) {
 	g.POST("/file/createDownloadUrl/:fid", a.FileApi.CreateDownloadUrl)
 	g.GET("/file/download/:code", a.FileApi.Download)
 
+	// 回收站
 	g.POST("/recycle/loadRecycleList", a.RecycleApi.GetFileList)
 	g.POST("/recycle/recoverFile", a.RecycleApi.RecoverFile)
 	g.POST("/recycle/delFile", a.RecycleApi.DelFiles)
 
+	// 分享
 	g.POST("/share/loadShareList", a.ShareApi.LoadShareList)
 	g.POST("/share/shareFile", a.ShareApi.ShareFile)
 	g.POST("/share/cancelShare", a.ShareApi.CancelShare)
 
+	// web分享
 	g.POST("/showShare/getShareLoginInfo", a.WebShareApi.GetShareLoginInfo)
 	g.POST("/showShare/getShareInfo", a.WebShareApi.GetShareInfo)
 	g.POST("/showShare/loadFileList", a.WebShareApi.LoadFileList)
@@ -116,6 +120,8 @@ func (a *Router) RegisterApI(app *gin.Engine) {
 	g.POST("/showShare/createDownloadUrl/:shareId/:fileId", a.WebShareApi.CreateDownloadUrl)
 	g.GET("/showShare/download/:code", a.WebShareApi.Download)
 	g.POST("/showShare/saveShare", a.WebShareApi.SaveShare)
+
+	// 加密文件
 	g.POST("/enc/addFile", a.EncAPI.AddFile)
 	g.POST("/enc/initEncPassword", a.EncAPI.InitPassword)
 	g.POST("/enc/checkPassword", a.EncAPI.CheckPassword)
@@ -124,6 +130,7 @@ func (a *Router) RegisterApI(app *gin.Engine) {
 	g.POST("/enc/delFile", a.EncAPI.DelFile)
 	g.POST("/enc/recoverFile", a.EncAPI.RecoverFile)
 
+	// issue
 	g.POST("/workOrder/create", a.WorkOrder.Create)
 	g.POST("/workOrder/get", a.WorkOrder.LoadWorkList)
 	g.POST("/admin/workOrder/get", a.AdminOrder.LoadWorkList)

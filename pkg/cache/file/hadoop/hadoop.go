@@ -44,3 +44,11 @@ func (hc *HadoopCache) Truncate(filepath string) error {
 	}
 	return client.DeleteFile(filepath)
 }
+
+func (hc *HadoopCache) Delete(filepath string) error {
+	client, err := hdfsUtil.NewClient("172.20.0.2:9000")
+	if err != nil {
+		return err
+	}
+	return client.DeleteFile(filepath)
+}

@@ -362,6 +362,7 @@ func (f *FileSrv) findAllSubFolderFileIdList(ctx context.Context, fileIdList *[]
 	}
 }
 
+// 删除文件
 func (f *FileSrv) DelFiles(ctx context.Context, uid string, fileId string) error {
 	fileIds := strings.Split(fileId, ",")
 	query := schema.RequestFileListPage{
@@ -383,21 +384,26 @@ func (f *FileSrv) DelFiles(ctx context.Context, uid string, fileId string) error
 		go func() {
 			f.Timer.Add("file_"+e.FileID+e.UserID, time.Now().Add(time.Hour*24*10), func() {
 				//  记录数量
-				count, err := f.Repo.CountFileByMd5(ctx, e.FileMd5)
-				if err != nil {
-					// 记录日志  /// --->>>
-					log.Default().Println("[error] ", err)
-					return
-				}
-				if count == 0 {
-					// 错误日志    md5数据有无
-					log.Default().Println("[error] ", "文件md5 不存在", e.FileMd5)
 
-				}
+				if e.FileType == define.FileTypeFolder {
 
-				// 如果当前文件
-				if count == 1 {
-					ossUtil.NewClient()
+				} else {
+					count, err := f.Repo.CountFileByMd5(ctx, e.FileMd5)
+					if err != nil {
+						// 记录日志  /// --->>>
+						log.Default().Println("[error] ", err)
+						return
+					}
+					if count == 0 {
+						// 错误日志    md5数据有无
+						log.Default().Println("[error] ", "文件md5 不存在", e.FileMd5)
+
+					}
+
+					// 如果当前文件
+					if count == 1 {
+						ossUtil.NewClient()
+					}
 				}
 
 				f.Repo.DelFiles(ctx, e.UserID, []string{e.FileID})

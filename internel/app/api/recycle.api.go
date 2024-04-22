@@ -55,6 +55,8 @@ func (f *RecycleApi) DelFiles(c *gin.Context) {
 		return
 	}
 
+	// f.RecycleSrv.Timer
+
 	ginx.ResOk(c)
 }
 

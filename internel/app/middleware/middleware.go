@@ -29,16 +29,13 @@ func AllowAdminSkipper(prefix ...string) SkipperFunc {
 	return func(ctx *gin.Context) bool {
 
 		path := ctx.Request.URL.Path
-		fmt.Printf("path: %v\n", path)
+
 		pathLen := len(path)
 		adminPrex := "/api/admin"
 		adminLen := len(adminPrex)
-		if pathLen < adminLen {
-			return true
-		}
 
 		//  排除前缀不属于的
-		if path[:adminLen] != adminPrex {
+		if pathLen < adminLen || path[:adminLen] != adminPrex {
 			return true
 		}
 

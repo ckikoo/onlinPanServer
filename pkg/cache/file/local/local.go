@@ -51,3 +51,11 @@ func (lc *LocalCache) Truncate(filepath string) error {
 
 	return nil
 }
+func (lc *LocalCache) Delete(filepath string) error {
+	err := os.RemoveAll(filepath)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

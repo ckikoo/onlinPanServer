@@ -136,6 +136,7 @@ func BuildInjector() (*Injector, func(), error) {
 			EndTime := joinTime.Add(time.Hour * 24 * 10)
 			timer.Add("file_"+file.FileID+file.UserID, EndTime, func() {
 				RecycleSrv.DelFiles(context.Background(), file.UserID, file.FileID)
+
 			})
 		}
 	}()

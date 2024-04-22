@@ -9,11 +9,14 @@ import (
 	"onlineCLoud/internel/app/dao/user"
 	"onlineCLoud/internel/app/define"
 	"onlineCLoud/internel/app/schema"
+	"onlineCLoud/pkg/cache"
 	"onlineCLoud/pkg/contextx"
 	"onlineCLoud/pkg/timer"
 	fileUtil "onlineCLoud/pkg/util/file"
 	"strings"
 	"time"
+
+	mapset "github.com/deckarep/golang-set"
 )
 
 type RecycleSrv struct {
@@ -44,7 +47,8 @@ func (f *RecycleSrv) LoadListFiles(ctx context.Context, uid string, pageNo, page
 	res.TotalCount = total
 	return &res, nil
 }
-func (f *RecycleSrv) findAllSubFolderFileList(ctx context.Context, fileIdList *[]string, userID, fileID string, delflag int8) {
+
+func (f *RecycleSrv) findAllSubAllFileIdList(ctx context.Context, fileIdList *[]string, userID, fileID string, delflag int8) {
 	*fileIdList = append(*fileIdList, fileID)
 
 	query := schema.RequestFileListPage{
@@ -58,11 +62,30 @@ func (f *RecycleSrv) findAllSubFolderFileList(ctx context.Context, fileIdList *[
 	}
 
 	for _, v := range fields {
-		f.findAllSubFolderFileList(ctx, fileIdList, userID, v.FileID, delflag)
+		f.findAllSubAllFileIdList(ctx, fileIdList, userID, v.FileID, delflag)
 	}
-
 }
 
+func (f *RecycleSrv) findAllSubAllFileMd5AndIdList(ctx context.Context, fileIdList *[]string, md5Set *mapset.Set, userID, fileID string, delflag int8) {
+	*fileIdList = append(*fileIdList, fileID)
+
+	query := schema.RequestFileListPage{
+		FilePid: fileID,
+		DelFlag: delflag,
+	}
+
+	fileLists, err := f.Repo.GetFileList(ctx, userID, &query, false)
+	if err != nil || fileLists == nil || len(fileLists) == 0 {
+		return
+	}
+
+	for _, v := range fileLists {
+		if v.FileMd5 != "" {
+			(*md5Set).Add(v.FileMd5)
+		}
+		f.findAllSubAllFileIdList(ctx, fileIdList, userID, v.FileID, delflag)
+	}
+}
 func (f *RecycleSrv) DelFiles(ctx context.Context, uid string, fileId string) error {
 	fileIds := strings.Split(fileId, ",")
 	query := schema.RequestFileListPage{
@@ -75,9 +98,9 @@ func (f *RecycleSrv) DelFiles(ctx context.Context, uid string, fileId string) er
 		return nil
 	}
 	delFileList := make([]string, 0)
-
+	Md5Set := mapset.NewSet()
 	for _, e := range fileInfoList {
-		f.findAllSubFolderFileList(ctx, &delFileList, uid, e.FileID, define.FileFlagSoftDeleted)
+		f.findAllSubAllFileMd5AndIdList(ctx, &delFileList, &Md5Set, uid, e.FileID, define.FileFlagSoftDeleted)
 	}
 
 	delFileList = append(fileIds, delFileList...)
@@ -107,7 +130,14 @@ func (f *RecycleSrv) DelFiles(ctx context.Context, uid string, fileId string) er
 	if err := f.Repo.DelFiles(ctx, uid, delFileList); err != nil {
 		return err
 	}
+
 	f.delfileToUpdateSpace(ctx, uid)
+
+	// 删除物理文件
+	for item := range Md5Set.Iter() {
+		md5 := item.(string)
+		cache.NewCacheReader("upload/" + md5 + "/")
+	}
 
 	return nil
 }
@@ -125,6 +155,7 @@ func (f *RecycleSrv) delfileToUpdateSpace(ctx context.Context, userid string) {
 	urv.UserRepo.UpdateSpace(ctx, contextx.FromUserEmail(ctx), total, true)
 }
 
+// 回复文件
 // 恢复文件-- 》 找当前在回收站的  --》 子目录 --》 父目录更新在根目录下 -- 》 子目录修改状态
 func (f *RecycleSrv) RecoverFile(ctx context.Context, uid string, fileIds string) error {
 	fildIdArray := strings.Split(fileIds, ",")
@@ -145,7 +176,7 @@ func (f *RecycleSrv) RecoverFile(ctx context.Context, uid string, fileIds string
 	FileIDList := make([]string, 0)
 	for _, fileinfo := range fileInfoList {
 		if fileinfo.FolderType == 1 {
-			f.findAllSubFolderFileList(ctx, &FileIDList, uid, fileinfo.FileID, define.FileFlagSoftDeleted) // 子目录
+			f.findAllSubAllFileIdList(ctx, &FileIDList, uid, fileinfo.FileID, define.FileFlagSoftDeleted) // 子目录
 		}
 	}
 	if len(FileIDList) > 0 {
@@ -166,10 +197,12 @@ func (f *RecycleSrv) RecoverFile(ctx context.Context, uid string, fileIds string
 		FilePid: "0",
 		DelFlag: define.FileFlagInUse,
 	}
+
 	fileinfolist, err := f.Repo.GetFileList(ctx, uid, &query, false)
 	if err != nil {
 		return err
 	}
+
 	for _, v := range fileinfolist {
 		rootFileMap[v.FileName] = v
 	}
