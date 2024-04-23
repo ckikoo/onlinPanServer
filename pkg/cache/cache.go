@@ -105,17 +105,11 @@ func (cr *CacheReader) Read() (*file.AbstractFile, error) {
 
 func (cr *CacheReader) Delete(filePath string) error {
 
-	for i, do := range cr.Caches {
-		if i == 1 {
-			if err := do.Delete("/" + filePath); err != nil {
-				// 记录日志
-				continue
-			}
-		} else {
-			if err := do.Delete(filePath); err != nil {
-				// 记录日志
-				continue
-			}
+	for _, do := range cr.Caches {
+
+		if err := do.Delete(filePath); err != nil {
+			// 记录日志
+			continue
 		}
 
 	}
