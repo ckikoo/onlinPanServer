@@ -28,6 +28,7 @@ import (
 	"strings"
 	"time"
 
+	mapset "github.com/deckarep/golang-set"
 	"github.com/gin-gonic/gin"
 )
 
@@ -765,4 +766,62 @@ func (srv *FileSrv) CancelUpload(ctx context.Context, uid string, fileid string)
 func (srv *FileSrv) UpdateFileSecure(ctx context.Context, uid string, fileid string, status bool) error {
 	fileids := strings.Split(fileid, ",")
 	return srv.Repo.UpdateFileSecure(ctx, uid, fileids, status)
+}
+
+func (srv *FileSrv) GetFileListTotalSize(ctx context.Context, uid string, fileid []string) (uint64, error) {
+	var sum uint64
+	sum = 0
+	md5Set := mapset.NewSet()
+	fileMd5 := make([]string, 0)
+
+	for _, id := range fileid {
+		srv.findAllSubAllFileIdAndMd5List(ctx, &fileMd5, &md5Set, uid, id, define.FileFlagInUse)
+	}
+	// 初始化一个 []string 类型的切片
+	var stringSlice []string
+	md5slice := md5Set.ToSlice()
+	for _, elem := range md5slice {
+		stringSlice = append(stringSlice, elem.(string))
+	}
+
+	files, err := srv.Repo.FindFilesByMd5s(ctx, stringSlice)
+	if err != nil {
+		return 0, err
+	}
+
+	md5ToSize := make(map[string]uint64)
+	for _, file := range files {
+		md5ToSize[file.FileMd5] = file.FileSize
+	}
+	for _, md5 := range fileMd5 {
+		size, ok := md5ToSize[md5]
+		if !ok {
+			continue
+		}
+		sum += size
+	}
+
+	return sum, nil
+}
+
+// 找出所有md5
+func (f *FileSrv) findAllSubAllFileIdAndMd5List(ctx context.Context, fileids *[]string, md5Set *mapset.Set, userID, fileID string, delflag int8) {
+
+	query := schema.RequestFileListPage{
+		FilePid: fileID,
+		DelFlag: delflag,
+	}
+
+	fileLists, err := f.Repo.GetFileList(ctx, userID, &query, false)
+	if err != nil || fileLists == nil || len(fileLists) == 0 {
+		return
+	}
+
+	for _, v := range fileLists {
+		if v.FileMd5 != "" {
+			*fileids = append(*fileids, v.FileMd5)
+			(*md5Set).Add(v.FileMd5)
+		}
+		f.findAllSubAllFileIdAndMd5List(ctx, fileids, md5Set, userID, v.FileID, delflag)
+	}
 }

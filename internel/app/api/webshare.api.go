@@ -17,6 +17,7 @@ import (
 	hdfsUtil "onlineCLoud/pkg/util/hdfs"
 	"onlineCLoud/pkg/util/random"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-contrib/sessions"
@@ -27,6 +28,7 @@ const sessionKey = "webShare_Key"
 const StandTime = "2006-01-02 15:04:05"
 
 type WebShareApi struct {
+	UserSrv  *service.UserSrv
 	ShareSrv *service.ShareSrv
 	FileSrv  *service.FileSrv
 }
@@ -299,15 +301,35 @@ func (api *WebShareApi) SaveShare(c *gin.Context) {
 	}
 
 	// 文件防护   ----->>
+	fileIds := strings.Split(shareFileIds, ",")
+	for _, id := range fileIds {
+		err := api.FileSrv.CheckFootFilePid(ctx, session.FileId, session.ShareUserId, id)
+		if err != nil {
+			ginx.ResFailWithMessage(c, err.Error())
+			return
+		}
+	}
 
-	// fileIds := strings.Split(shareFileIds, ",")
+	// 检查剩余空间
 
-	// for _.id := range fileIds {
+	sum, err := api.FileSrv.GetFileListTotalSize(ctx, session.ShareUserId, fileIds)
+	if err != nil {
+		ginx.ResFailWithMessage(c, err.Error())
+		return
+	}
 
-	// 	api.FileSrv.CheckFootFilePid(ctx, session.FileId, session.ShareUserId)
-	// }
+	space := api.UserSrv.GetUserSpaceById(ctx, currentUser)
+	if space.TotalSpace == 0 {
+		ginx.ResFailWithMessage(c, errors.New("获取错误").Error())
+		return
+	}
 
-	err := api.FileSrv.SaveShare(ctx, session.FileId, shareFileIds, myFolderId, session.ShareUserId, currentUser)
+	if space.UseSpace+sum > space.TotalSpace {
+		ginx.ResFailWithMessage(c, errors.New("空间不够").Error())
+		return
+	}
+
+	err = api.FileSrv.SaveShare(ctx, session.FileId, shareFileIds, myFolderId, session.ShareUserId, currentUser)
 	if err != nil {
 		ginx.ResFailWithMessage(c, err.Error())
 		return

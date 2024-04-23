@@ -177,6 +177,20 @@ func (f *FileRepo) CountFileByMd5(ctx context.Context, md5 string) (int64, error
 	return count, nil
 }
 
+func (f *FileRepo) FindFilesByMd5s(ctx context.Context, md5 []string) ([]File, error) {
+
+	db := GetFileDB(ctx, f.Db)
+	files := make([]File, 0)
+	if err := db.Where("file_md5 IN (?)", md5).Group("file_md5").Find(&files).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return files, nil
+}
+
 func (f *FileRepo) GetFileByMd5(ctx context.Context, md5 string) (*File, error) {
 	db := GetFileDB(ctx, f.Db)
 

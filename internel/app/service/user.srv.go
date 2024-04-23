@@ -58,6 +58,11 @@ func (a *UserSrv) GetUserSpace(ctx context.Context, email string) map[string]int
 
 }
 
+func (a *UserSrv) GetUserSpaceById(ctx context.Context, id string) user.UserSpace {
+
+	return a.UserRepo.GetUserSpaceById(ctx, id)
+
+}
 func (a *UserSrv) UpdateSpace(ctx context.Context, email string, add uint64) error {
 	return a.UserRepo.UpdateSpace(ctx, email, add)
 }

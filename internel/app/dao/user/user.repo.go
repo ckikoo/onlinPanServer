@@ -150,6 +150,17 @@ func (a *UserRepo) GetUseSpace(ctx context.Context, email string) map[string]int
 	return item.ToMap()
 }
 
+func (a *UserRepo) GetUserSpaceById(ctx context.Context, id string) UserSpace {
+
+	var item User
+
+	err := GetUserDB(ctx, a.DB).Select("use_space ", "total_space").Where(&User{UserID: id}).First(&item).Error
+	if err != nil {
+		return UserSpace{}
+	}
+	return item.UserSpace
+}
+
 func (a *UserRepo) UpdateSpace(ctx context.Context, email string, add uint64, update ...bool) error {
 	a.Rd.Delete(ctx, "user:space:"+email)
 	db := GetUserDB(ctx, a.DB).Where("email = ?", email)

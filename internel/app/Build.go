@@ -96,9 +96,11 @@ func BuildInjector() (*Injector, func(), error) {
 	}
 
 	WebShareApi := api.WebShareApi{
+		UserSrv:  &userSrv,
 		ShareSrv: &ShareSrv,
 		FileSrv:  &FileSrv,
 	}
+
 	work := api.WorkOrderApi{
 		Srv: service.WorkOrderSrv{
 			Repo: &workOrder.WorkOrderRepo{
