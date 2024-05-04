@@ -5,3 +5,4 @@ go.sum
 *.sh
 init
 img/*
+go.mod
