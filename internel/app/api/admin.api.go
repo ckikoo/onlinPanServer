@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"onlineCLoud/internel/app/ginx"
 	"onlineCLoud/internel/app/service"
 	"onlineCLoud/pkg/contextx"
@@ -82,7 +81,6 @@ func (api *AdminApi) GetFolderInfo(c *gin.Context) {
 		ginx.ResFail(c)
 		return
 	}
-	fmt.Printf("res.List: %v\n", res)
 	ginx.ResOkWithData(c, res)
 
 }

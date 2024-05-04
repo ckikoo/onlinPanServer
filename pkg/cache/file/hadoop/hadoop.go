@@ -1,7 +1,6 @@
 package hadoop
 
 import (
-	"fmt"
 	"io"
 	"onlineCLoud/pkg/file"
 	hdfsUtil "onlineCLoud/pkg/util/hdfs"
@@ -39,7 +38,6 @@ func (hc *HadoopCache) Put(filePath string, content io.Reader) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("filePath: %v\n", filePath)
 	return client.WriteFile(filePath, content)
 
 }

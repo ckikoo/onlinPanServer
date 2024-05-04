@@ -37,11 +37,7 @@ func (oss *OssClient) CopyDirFromLocal(srcDir, destDir string) error {
 		return err
 	}
 
-	fmt.Printf("srcDir: %v\n", srcDir)
-	fmt.Printf("destDir: %v\n", destDir)
-
 	for _, file := range fileInfos {
-		fmt.Printf("file: %v\n", file)
 		if file.IsDir() {
 			err := oss.CopyDirFromLocal(path.Join(srcDir, file.Name()), path.Join(destDir, file.Name()))
 			if err != nil {
@@ -51,14 +47,12 @@ func (oss *OssClient) CopyDirFromLocal(srcDir, destDir string) error {
 
 			srcFile, err := os.Open(path.Join(srcDir, file.Name()))
 			if err != nil {
-				panic(err)
 				return err
 			}
 			defer srcFile.Close()
 
 			err = oss.bucket.PutObject(path.Join(destDir, file.Name()), srcFile)
 			if err != nil {
-				panic(err)
 				return err
 			}
 		}
@@ -110,6 +104,5 @@ func (cleint *OssClient) DeleteDir(dir string) error {
 		}
 	}
 
-	fmt.Printf("Successfully deleted %d objects with prefix '%s'\n", objectsDeleted, dir)
 	return nil
 }

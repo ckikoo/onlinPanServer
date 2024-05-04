@@ -45,7 +45,6 @@ func AllowAdminSkipper(prefix ...string) SkipperFunc {
 		for _, p := range prefix {
 			if p1 := len(p); pathLen >= p1 {
 				admin := contextx.GetAdmin(ctx.Request.Context())
-				fmt.Printf("admin: %v\n", admin)
 				if admin == "1" && isAdmin == "admin" {
 					return true
 				}

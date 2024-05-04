@@ -637,8 +637,6 @@ func (f *FileSrv) ChangeFileFolder(ctx context.Context, uid string, fileIds stri
 
 // 校验文件   // 防止文件跳跃访问      //   环境变量          分享的根目录   用户id   当前文件id
 func (f *FileSrv) CheckFootFilePid(ctx context.Context, rootFilePid, userId, fileId string) error {
-	fmt.Println("-------------------------------------------------")
-	fmt.Printf("rootFilePid: %v\n", rootFilePid)
 
 	if len(rootFilePid) == 0 || len(fileId) == 0 { // 文件id 非法参数
 		return errors.New("非法参数")
@@ -678,7 +676,6 @@ func (f *FileSrv) SaveShare(ctx context.Context,
 	shareUserId, currentUserId string) error {
 
 	shareFileIdArray := strings.Split(shareFileIds, ",")
-	fmt.Printf("shareFileIdArray: %v\n", shareFileIdArray)
 
 	// 获取当前文件 列表
 	query := new(schema.RequestFileListPage)
@@ -688,14 +685,12 @@ func (f *FileSrv) SaveShare(ctx context.Context,
 	if err != nil {
 		return err
 	}
-	fmt.Printf("currentFileList: %v\n", currentFileList)
 	currentFileMap := make(map[string]file.File, 0)
 
 	// 建立一个map 以文件名作为映射
 	for _, info := range currentFileList {
 		currentFileMap[info.FileName] = info
 	}
-	fmt.Printf("currentFileMap: %v\n", currentFileMap)
 
 	// 获取当前路径下分享文件列表
 	query = new(schema.RequestFileListPage)
@@ -706,7 +701,6 @@ func (f *FileSrv) SaveShare(ctx context.Context,
 		return err
 	}
 
-	fmt.Printf("shareFileList: %v\n", shareFileList)
 	fileList := make([]file.File, 0)
 	currentTime := time.Now().Format("2006-01-02 15:04:05") // 获取当前的时间
 	for _, info := range shareFileList {                    // 便利分享的文件列表

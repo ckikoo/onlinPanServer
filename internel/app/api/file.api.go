@@ -70,7 +70,6 @@ func (f *FileApi) UploadFile(c *gin.Context) {
 func (f *FileApi) CancelUpload(c *gin.Context) {
 	ctx := c.Request.Context()
 	fileId := c.PostForm("fileId")
-	fmt.Printf("fileId: %v\n", fileId)
 	m := make(map[string]interface{}, 0)
 	item := f.FileSrv.Timer.Del(fileId + contextx.FromUserID(ctx))
 	item.Action()
@@ -140,7 +139,6 @@ func (f *FileApi) GetFileInfo(c *gin.Context) {
 	if fid == "" {
 		ginx.ResFail(c)
 	}
-	fmt.Printf("fid: %v\n", fid)
 	body, err := f.FileSrv.GetFile(ctx, fid, contextx.FromUserID(ctx))
 
 	if err != nil {
@@ -161,7 +159,6 @@ func (f *FileApi) GetFolderInfo(c *gin.Context) {
 		ginx.ResFail(c)
 		return
 	}
-	fmt.Printf("res.List: %v\n", res)
 	ginx.ResOkWithData(c, res)
 
 }
@@ -181,7 +178,6 @@ func (f *FileApi) FileRename(c *gin.Context) {
 		ginx.ResFail(c)
 		return
 	}
-	fmt.Printf("contextx.FromUserID(ctx): %v\n", contextx.FromUserID(ctx))
 	file, err := f.FileSrv.FileRename(ctx, contextx.FromUserID(ctx), fileId, filePId, fileName)
 	if err != nil || file == nil {
 		ginx.ResFail(c)
@@ -200,7 +196,6 @@ func (f *FileApi) LoadAllFolder(c *gin.Context) {
 		log.Println("LoadAllFolder 用户参数不合法")
 		ginx.ResFail(c)
 	}
-	fmt.Printf("contextx.FromUserID(ctx): %v\n", contextx.FromUserID(ctx))
 	files, err := f.FileSrv.LoadAllFolder(ctx, contextx.FromUserID(ctx), filePid, currentFileIds)
 	if err != nil {
 		ginx.ResFail(c)
@@ -259,7 +254,6 @@ func (f *FileApi) Download(c *gin.Context) {
 	ctx := c.Request.Context()
 	code := c.Param("code")
 
-	fmt.Printf("c.Request: %v\n", c.Request)
 	if len(code) == 0 {
 		ginx.ResFail(c)
 		return

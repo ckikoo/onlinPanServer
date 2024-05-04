@@ -2,7 +2,6 @@ package jwtauth
 
 import (
 	"context"
-	"fmt"
 	"onlineCLoud/pkg/auth"
 	"time"
 
@@ -144,10 +143,8 @@ func (a *JWTAuth) ParseUserEmail(ctx context.Context, tokenString string) (strin
 	if err != nil {
 		return "", err
 	}
-	fmt.Printf("err: %v\n", err)
 	err = a.callStore(func(store Storer) error {
 		if exists, err := store.Check(ctx, tokenString); err != nil {
-			fmt.Printf("err: %v\n", err)
 			return err
 		} else if exists {
 			return auth.ErrInvalidToken

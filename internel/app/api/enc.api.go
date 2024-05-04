@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"onlineCLoud/internel/app/ginx"
 	"onlineCLoud/internel/app/schema"
 	"onlineCLoud/internel/app/service"
@@ -35,7 +34,6 @@ func (api *EncAPI) AddFile(c *gin.Context) {
 		ginx.ResFail(c)
 		return
 	}
-	fmt.Printf("fileIds: %v\n", fileIds)
 
 	err := api.FileSrv.UpdateFileSecure(ctx, contextx.FromUserID(ctx), fileIds, true)
 	if err != nil {
@@ -69,7 +67,6 @@ func (api *EncAPI) InitPassword(c *gin.Context) {
 func (api *EncAPI) CheckPassword(c *gin.Context) {
 	ctx := c.Request.Context()
 	pass := c.PostForm("encpass")
-	fmt.Printf("pass: %v\n", pass)
 	if pass == "" {
 
 		ginx.ResFail(c)

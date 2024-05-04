@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"onlineCLoud/internel/app/config"
 	"onlineCLoud/internel/app/ginx"
 	"onlineCLoud/internel/app/service"
@@ -11,7 +10,6 @@ import (
 
 func GenerateCaptcha(ctx *gin.Context) {
 	Type := ctx.Query("type")
-	fmt.Printf("Type: %v\n", Type)
 	cfg := config.C.Captcha
 	service.Captcha(ctx, Type, cfg.Length, cfg.Width, cfg.Height)
 }

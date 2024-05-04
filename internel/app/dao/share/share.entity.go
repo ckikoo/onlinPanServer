@@ -15,6 +15,7 @@ type Share struct {
 	Code       string `json:"code" form:"code" gorm:"column:code;type:varchar(5) ;"`
 	ValidType  int8   `json:"validType" form:"validType" gorm:"column:valid_type;type:tinyint(1);"`
 	ShowCount  uint32 `json:"showCount" form:"showCount" gorm:"column:show_count;type:int(11);"`
+	FileName   string `json:"fileName"   form:"fileName" gorm:"column:file_name;type:varchar(255)"` //文件名
 }
 
 func GetShareDB(ctx context.Context, db *gorm.DB) *gorm.DB {

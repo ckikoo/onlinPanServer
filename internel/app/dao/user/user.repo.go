@@ -127,7 +127,6 @@ func (a *UserRepo) SetRedis(ctx context.Context, email string, in string) error 
 }
 
 func (a *UserRepo) GetUseSpace(ctx context.Context, email string) map[string]interface{} {
-	fmt.Printf("email: %v\n", email)
 	space, _ := a.Rd.Get(ctx, "user:space:"+email)
 	fmt.Printf("space: %v\n", space)
 	var item UserSpace
@@ -137,16 +136,11 @@ func (a *UserRepo) GetUseSpace(ctx context.Context, email string) map[string]int
 	}
 	err := GetUserDB(ctx, a.DB).Select("use_space ", "total_space").Where("email = ?", email).First(&item).Error
 	if err != nil {
-		var item map[string]interface{}
-		item["useSpace"] = 0
-		item["totalSpace"] = 0
-		return item
+		return item.ToMap()
 	}
-	fmt.Println("debug---------------------------")
 
 	str := jsonutil.MarshalToString(item)
 	a.Rd.Set(ctx, "user:space:"+email, str, time.Hour*(24))
-	fmt.Printf("item: %v\n", item)
 	return item.ToMap()
 }
 

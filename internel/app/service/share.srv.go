@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"onlineCLoud/internel/app/dao/dto"
 	"onlineCLoud/internel/app/dao/file"
 	"onlineCLoud/internel/app/dao/share"
@@ -99,7 +98,6 @@ func (f *ShareSrv) GetShareInfo(ctx context.Context, shareId string) (*schema.Sh
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("userinfo: %v\n", userinfo)
 
 	fileSrv := FileSrv{Repo: &file.FileRepo{Db: f.Repo.DB}}
 	fileinfo, err := fileSrv.GetFileInfo(ctx, info.FileId, info.UserId)
@@ -115,8 +113,6 @@ func (f *ShareSrv) GetShareInfo(ctx context.Context, shareId string) (*schema.Sh
 	shareInfoRes.FileName = fileinfo.FileName
 	shareInfoRes.NickName = userinfo.NickName
 	shareInfoRes.CurrentUser = contextx.FromUserID(ctx) == userinfo.UserID
-	fmt.Printf("contextx.FromUserID(ctx): %v\n", contextx.FromUserID(ctx))
-	fmt.Printf("userinfo: %v\n", userinfo)
 	if info.ValidType == define.FileShareForverDay {
 		shareInfoRes.ExpireTime = "永久"
 	} else {
@@ -175,7 +171,7 @@ func (f *ShareSrv) CheckShareCode(ctx context.Context, shareId string, code stri
 		return nil, err
 	}
 
-	f.UpdateShareShowCount(ctx, shareId)
+	f.AddShareShowCount(ctx, shareId)
 
 	session := new(dto.SessionWebShareDto)
 	session.FileId = shareInfo.FileId
@@ -185,9 +181,9 @@ func (f *ShareSrv) CheckShareCode(ctx context.Context, shareId string, code stri
 
 	return session, nil
 }
-func (f *ShareSrv) UpdateShareShowCount(ctx context.Context, shareId string) error {
+func (f *ShareSrv) AddShareShowCount(ctx context.Context, shareId string) error {
 
-	_, err := f.Repo.UpdateShareShowCount(ctx, shareId)
+	_, err := f.Repo.AddShareShowCount(ctx, shareId)
 
 	return err
 }

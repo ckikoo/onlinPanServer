@@ -38,7 +38,6 @@ func NewCacheReader(filePath string) *CacheReader {
 }
 
 func (cr *CacheReader) out(cache Cache, file *file.AbstractFile) error {
-	fmt.Printf("file: %v\n", file)
 	for {
 		buf := make([]byte, 16*1024*1024)
 		cnt, err := file.Read(buf)
@@ -48,7 +47,6 @@ func (cr *CacheReader) out(cache Cache, file *file.AbstractFile) error {
 			}
 			return fmt.Errorf("error reading file: %w", err)
 		}
-		fmt.Printf("cnt: %v\n", cnt)
 		if cnt == 0 {
 			break
 		}
@@ -57,7 +55,6 @@ func (cr *CacheReader) out(cache Cache, file *file.AbstractFile) error {
 			return err
 		}
 	}
-	fmt.Println("1111")
 	return nil
 }
 

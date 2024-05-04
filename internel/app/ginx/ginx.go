@@ -72,7 +72,6 @@ func ParseForm(c *gin.Context, obj interface{}) error {
 	if err := c.ShouldBindWith(obj, binding.Form); err != nil {
 		return errors.Wrap400Response(err, fmt.Sprintf("Parse request form failed: %s", err.Error()))
 	}
-	fmt.Println("parse success")
 	return nil
 }
 

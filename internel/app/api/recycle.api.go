@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"onlineCLoud/internel/app/ginx"
 	"onlineCLoud/internel/app/service"
 	"onlineCLoud/pkg/contextx"
@@ -25,9 +24,12 @@ func (f *RecycleApi) GetFileList(c *gin.Context) {
 		pageSize = "10"
 	}
 	PageNo, err := strconv.ParseInt(pageNo, 10, 64)
+	if err != nil {
+		ginx.ResFailWithMessage(c, "获取数据失败")
+		return
+	}
 	PageSize, err := strconv.ParseInt(pageSize, 10, 64)
-	fmt.Printf("pageNo: %v\n", pageNo)
-	fmt.Printf("pageNo: %v\n", pageSize)
+
 	if err != nil {
 		ginx.ResFailWithMessage(c, "获取数据失败")
 		return

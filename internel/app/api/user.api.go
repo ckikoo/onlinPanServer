@@ -111,7 +111,6 @@ func (a *UserAPI) GetUserAvatar(c *gin.Context) {
 	if uid == "" {
 		ginx.ResFail(c)
 	}
-	fmt.Printf("uid: %v\n", uid)
 	err := a.UserSrv.GetUserAvatar(c.Writer, c.Request, uid)
 	if err != nil {
 		ginx.ResFailWithMessage(c, "获取用户信息失败")

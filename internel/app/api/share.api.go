@@ -45,6 +45,7 @@ func (s *ShareApi) LoadShareList(c *gin.Context) {
 		ginx.ResFail(c)
 		return
 	}
+
 	ginx.ResOkWithData(c, list)
 }
 

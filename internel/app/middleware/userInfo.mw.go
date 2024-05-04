@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"fmt"
 	"onlineCLoud/internel/app/ginx"
 	"onlineCLoud/pkg/auth"
 	"onlineCLoud/pkg/contextx"
@@ -10,7 +9,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// TODO: ADD support admin
 func wrapUserAuthContext(c *gin.Context, userID string, email string, admin string) {
 	ctx := contextx.NewUserEmail(c.Request.Context(), email)
 	ctx = contextx.NewUserID(ctx, userID)
@@ -47,8 +45,6 @@ func UserInfo(a auth.Auther) gin.HandlerFunc {
 			ctx.Next()
 			return
 		}
-
-		fmt.Printf("info: %v\n", info)
 
 		userID := info[0]
 

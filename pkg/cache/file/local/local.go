@@ -1,7 +1,6 @@
 package local
 
 import (
-	"fmt"
 	"io"
 	"onlineCLoud/pkg/file"
 	fileUtil "onlineCLoud/pkg/util/file"
@@ -18,7 +17,6 @@ func (lc *LocalCache) Get(filePath string) (*file.AbstractFile, error) {
 		return nil, err
 	}
 
-	fmt.Printf("f: %v\n", f)
 	fileabs.Closer = f
 	fileabs.Reader = f
 	fileabs.Seeker = f
@@ -32,7 +30,6 @@ func (lc *LocalCache) Put(filePath string, content io.Reader) error {
 		return err
 	}
 	defer file.Close()
-	fmt.Println("localcacahe diapo")
 	// 将 content 的数据写入到文件中
 	_, err = io.Copy(file, content)
 	if err != nil {

@@ -91,7 +91,7 @@ func (api *WebShareApi) LoadFileList(c *gin.Context) {
 	}
 
 	if err := api.checkShare(ctx, item.ShareId); err != nil {
-		ginx.ResOkWithMessage(c, err.Error())
+		ginx.ResFailWithMessage(c, err.Error())
 		return
 	}
 
@@ -100,6 +100,7 @@ func (api *WebShareApi) LoadFileList(c *gin.Context) {
 		ginx.ResFail(c)
 		return
 	}
+
 	ginx.ResOkWithData(c, info)
 
 }
