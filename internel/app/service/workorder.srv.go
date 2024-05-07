@@ -87,5 +87,9 @@ func (srv *WorkOrderSrv) AdminUpdateWorkOrder(ctx context.Context, uid string, w
 	return srv.Repo.Update(ctx, item.WorkOrderId, item)
 }
 func (srv *WorkOrderSrv) DeleOrederSrv(ctx context.Context, uid string, workId string) error {
-	panic("")
+	err := srv.Repo.Delete(ctx, uid, workId)
+	if err != nil {
+		return err
+	}
+	return nil
 }

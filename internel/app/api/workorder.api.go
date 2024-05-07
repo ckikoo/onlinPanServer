@@ -83,18 +83,17 @@ func (a *WorkOrderApi) Create(c *gin.Context) {
 
 	ginx.ResOkWithMessage(c, "添加成功")
 }
-func (a *WorkOrderApi) Update(c *gin.Context) {
+func (a *WorkOrderApi) Delete(c *gin.Context) {
 	ctx := c.Request.Context()
-	id := c.Request.PostFormValue("id")
-	content := c.Request.PostFormValue("content")
-	title := c.Request.PostFormValue("title")
+	id := c.Request.PostFormValue("userId")
+	workOrderId := c.Request.PostFormValue("workOrderId")
 
-	if len(id) == 0 || len(content) == 0 || len(title) == 0 {
+	if len(id) == 0 || len(workOrderId) == 0 || contextx.FromUserID(ctx) != id {
 		ginx.ResFail(c)
 		return
 	}
 
-	err := a.Srv.UpdateWorkOrder(ctx, contextx.FromUserID(ctx), id, title, content)
+	err := a.Srv.DeleOrederSrv(ctx, id, workOrderId)
 	if err != nil {
 		ginx.ResFail(c)
 		return

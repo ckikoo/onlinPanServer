@@ -13,13 +13,8 @@ import (
 )
 
 var (
-	lock = "if redis.call('exists',KEYS[1])==0 or redis.call('hexists',KEYS[1],ARGV[1])==1 then redis.call('hincrby',KEYS[1],ARGV[1],1) redis.call('expire',KEYS[1],ARGV[2]) return 1 else return 0 end"
-)
-var (
-	unlock = "if redis.call('hexists',KEYS[1],ARGV[1])==0 then return -1 elseif redis.call('hincrby',KEYS[1],ARGV[1],-1)==0 then return redis.call('del',KEYS[1]) else return 0 end"
-)
-
-var (
+	lock      = "if redis.call('exists',KEYS[1])==0 or redis.call('hexists',KEYS[1],ARGV[1])==1 then redis.call('hincrby',KEYS[1],ARGV[1],1) redis.call('expire',KEYS[1],ARGV[2]) return 1 else return 0 end"
+	unlock    = "if redis.call('hexists',KEYS[1],ARGV[1])==0 then return -1 elseif redis.call('hincrby',KEYS[1],ARGV[1],-1)==0 then return redis.call('del',KEYS[1]) else return 0 end"
 	keepAlive = "if redis.call('hexists',KEYS[1],ARGV[1])==1 then return redis.call('expire',KEYS[1],ARGV[2]) else return 0 end"
 )
 
@@ -239,8 +234,29 @@ func (r *Redisx) Hexists(ctx context.Context, key string, field string) (bool, e
 	return r.cli.HExists(key, field).Result()
 }
 
-func (r *Redisx) HMset(ctx context.Context, key string, m map[string]interface{}) (string, error) {
-	return r.cli.HMSet(key, m).Result()
+func (r *Redisx) HMset(ctx context.Context, key string, m map[string]interface{}, expiration time.Duration) (int64, error) {
+	script := `
+        -- 判断HMSet命令是否执行成功，并设置过期时间
+        if redis.call('HMSet', KEYS[1], unpack(ARGV, 2)) == 'OK' then
+            -- 设置过期时间
+            redis.call('expire', KEYS[1], ARGV[1])
+            return 1
+        else
+            return 0
+        end
+    `
+	expirationSeconds := int(expiration.Seconds())
+	args := []interface{}{expirationSeconds}
+	for k, v := range m {
+		args = append(args, k, v)
+	}
+
+	result, err := r.cli.Eval(script, []string{key}, args...).Int64()
+	if err != nil {
+		return 0, err
+	}
+
+	return result, nil
 }
 
 func (r *Redisx) HSet(ctx context.Context, key string, field string, val interface{}) (bool, error) {

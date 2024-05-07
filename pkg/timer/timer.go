@@ -7,6 +7,9 @@ import (
 	"time"
 )
 
+var once sync.Once
+var TimerInstance *TimerManager
+
 // TimerManager 定时器管理器
 type TimerManager struct {
 	timer       *time.Timer
@@ -14,6 +17,16 @@ type TimerManager struct {
 	closeChan   chan struct{}
 	hasItemChan chan struct{}
 	mu          *sync.Mutex
+}
+
+func GetInstance() *TimerManager {
+	once.Do(func() {
+		instance, _ := NewTimerManager()
+
+		TimerInstance = instance
+	})
+
+	return TimerInstance
 }
 
 // NewTimerManager 创建一个新的定时器管理器

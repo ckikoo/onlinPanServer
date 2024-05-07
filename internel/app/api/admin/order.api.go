@@ -62,3 +62,21 @@ func (a *AdminOrderApi) Update(c *gin.Context) {
 
 	ginx.ResOkWithMessage(c, "修改成功")
 }
+func (a *AdminOrderApi) Delete(c *gin.Context) {
+	ctx := c.Request.Context()
+	id := c.Request.PostFormValue("userId")
+	workOrderId := c.Request.PostFormValue("workOrderId")
+
+	if len(id) == 0 || len(workOrderId) == 0 {
+		ginx.ResFail(c)
+		return
+	}
+
+	err := a.Srv.DeleOrederSrv(ctx, id, workOrderId)
+	if err != nil {
+		ginx.ResFail(c)
+		return
+	}
+
+	ginx.ResOkWithMessage(c, "修改成功")
+}

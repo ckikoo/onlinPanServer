@@ -2,22 +2,11 @@ package api
 
 import (
 	"fmt"
-	"io"
 	"log"
-	"net/http"
-	"onlineCLoud/internel/app/config"
-	"onlineCLoud/internel/app/dao/dto"
-	"onlineCLoud/internel/app/dao/redisx"
 	"onlineCLoud/internel/app/ginx"
 	"onlineCLoud/internel/app/schema"
 	"onlineCLoud/internel/app/service"
-	"onlineCLoud/pkg/cache"
 	"onlineCLoud/pkg/contextx"
-	"onlineCLoud/pkg/file"
-	hdfsUtil "onlineCLoud/pkg/util/hdfs"
-	"onlineCLoud/pkg/util/json"
-	"onlineCLoud/pkg/util/random"
-	"os"
 
 	"time"
 
@@ -25,7 +14,8 @@ import (
 )
 
 type FileApi struct {
-	FileSrv *service.FileSrv
+	FileSrv     *service.FileSrv
+	DownLoadSrv *service.DownLoadSrv
 }
 
 func (f *FileApi) GetFileList(c *gin.Context) {
@@ -233,115 +223,14 @@ func (f *FileApi) CreateDownloadUrl(c *gin.Context) {
 		ginx.ResJson(c, 400, "", "操作错误", "fail")
 		return
 	}
+	currentime := time.Now().Unix()
 
-	code := random.GetStrRandom(50)
+	code := fmt.Sprintf("%v_%v_%v", file.UserID, currentime, file.FileID)
 
-	modi, _ := time.Parse("2006-01-02 15:04:05", file.CreateTime)
-	dto := dto.DownloadDto{
-		Code:     code,
-		FileName: file.FileName,
-		Path:     file.FilePath,
-		FileSize: file.FileSize,
-		Modi:     modi,
+	err = f.DownLoadSrv.CreateDownLoad(ctx, file.UserID, file.FileID, file.FilePath, code)
+	if err != nil {
+		ginx.ResFailWithMessage(c, err.Error())
+		return
 	}
-
-	rdx := redisx.NewClient()
-	rdx.Set(ctx, fmt.Sprintf("download:%v", code), json.MarshalToString(dto), time.Duration(30)*time.Minute)
 	ginx.ResOkWithData(c, code)
-}
-
-func (f *FileApi) Download(c *gin.Context) {
-	ctx := c.Request.Context()
-	code := c.Param("code")
-
-	if len(code) == 0 {
-		ginx.ResFail(c)
-		return
-	}
-
-	var dto dto.DownloadDto
-	rdx := redisx.NewClient()
-	str, err := rdx.Get(ctx, fmt.Sprintf("download:%v", code))
-	if err != nil || len(str) == 0 {
-		ginx.ResFailWithMessage(c, "文件不存在")
-		return
-	}
-	f.FileSrv.Timer.Add("local_cache_delete"+dto.Path, time.Now().Add(time.Hour*24), func() {
-		os.RemoveAll(dto.Path)
-	})
-	f.FileSrv.Timer.Add("hdfs_cache_delete"+dto.Path, time.Now().Add(time.Hour*24*7), func() {
-		client, err := hdfsUtil.NewClient("172.20.0.2:9000")
-		if err != nil {
-			panic(err)
-		}
-		client.DeleteFile("/" + dto.Path)
-	})
-
-	json.Unmarshal([]byte(str), &dto)
-
-	cr := cache.NewCacheReader(dto.Path)
-	reader, err := cr.Read()
-	if err != nil {
-		c.String(http.StatusNotFound, err.Error())
-		return
-	}
-	defer reader.Close()
-
-	// 限制每次读取的字节数为 100 KB
-	limitedReader := &RateLimitedReader{
-		R:     reader,
-		Limit: int64(config.C.Download.Limit) * 1024,
-	}
-	c.Header("Content-Length", fmt.Sprintf("%d", dto.FileSize))
-	c.Writer.Header().Set("Content-Type", "application/octet-stream")
-	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", dto.FileName))
-	c.Header("Accept-Ranges", "bytes")
-	c.Header("Etag", dto.Modi.String())
-	http.ServeContent(c.Writer, c.Request, dto.FileName, dto.Modi, limitedReader)
-}
-
-// RateLimitedReader 实现了 io.Reader 接口，用于限制读取速度。
-type RateLimitedReader struct {
-	R       io.Reader // 1原始的 io.Reader
-	Limit   int64     // 每秒读取的字节数限制
-	LastSec int64     // 上次读取的时间戳
-	ReadCnt int64     // 当前秒内已读取的字节数
-}
-
-func (r *RateLimitedReader) Seek(offset int64, whence int) (int64, error) {
-	return r.R.(*file.AbstractFile).Seek(offset, whence)
-}
-
-func (r *RateLimitedReader) Read(p []byte) (n int, err error) {
-	// 获取当前时间戳
-	now := time.Now().Unix()
-
-	// 如果距离上次读取的时间大于1秒，则重置读取字节数
-	if now-r.LastSec > 1 {
-		r.ReadCnt = 0
-		r.LastSec = now
-	}
-
-	// 计算当前秒内还可以读取的字节数
-	remaining := r.Limit - r.ReadCnt
-
-	// 如果剩余可读字节数为0，则等待1秒后重新计算
-	if remaining <= 0 {
-		return 0, nil
-	}
-
-	// 限制每次读取的字节数不超过剩余可读字节数
-	if int64(len(p)) > remaining {
-		p = p[:remaining]
-	}
-
-	// 读取数据
-	n, err = r.R.Read(p)
-	if err != nil {
-		return n, err
-	}
-
-	// 更新已读取字节数
-	r.ReadCnt += int64(n)
-	return n, nil
 }

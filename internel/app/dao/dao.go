@@ -2,6 +2,8 @@ package dao
 
 import (
 	"onlineCLoud/internel/app/config"
+	"onlineCLoud/internel/app/dao/download"
+	"onlineCLoud/internel/app/dao/enc"
 	"onlineCLoud/internel/app/dao/file"
 	workOrder "onlineCLoud/internel/app/dao/gongdan"
 	"onlineCLoud/internel/app/dao/share"
@@ -22,6 +24,8 @@ func AutoMigrate(db *gorm.DB) error {
 		new(file.File),
 		new(share.Share),
 		new(workOrder.WorkOrder),
+		new(download.Download),
+		new(enc.Enc),
 	)
 
 	return err

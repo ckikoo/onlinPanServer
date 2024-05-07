@@ -90,7 +90,7 @@ func (cr *CacheReader) Read() (*file.AbstractFile, error) {
 				if err != nil {
 					panic(err)
 				}
-				cr.resetCache(r, 1, pos)
+				go cr.resetCache(r, 1, pos)
 				r.Seeker.Seek(0, io.SeekStart)
 				return r, nil
 			}

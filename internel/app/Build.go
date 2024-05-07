@@ -4,6 +4,7 @@ import (
 	"context"
 	"onlineCLoud/internel/app/api"
 	"onlineCLoud/internel/app/api/admin"
+	"onlineCLoud/internel/app/dao/download"
 	"onlineCLoud/internel/app/dao/file"
 	workOrder "onlineCLoud/internel/app/dao/gongdan"
 	"onlineCLoud/internel/app/dao/mailx"
@@ -29,7 +30,7 @@ func BuildInjector() (*Injector, func(), error) {
 		cleanup()
 		return nil, nil, err
 	}
-	timer, timerClean := timer.NewTimerManager()
+	timer := timer.GetInstance()
 
 	cleanup3 := mailx.Init()
 
@@ -59,8 +60,17 @@ func BuildInjector() (*Injector, func(), error) {
 		Repo:  &fileRepo,
 		Timer: timer,
 	}
+	downloadRepo := download.DownloadRepo{
+		Db: db,
+	}
+
+	downloadSrv := service.DownLoadSrv{
+		Repo: &downloadRepo,
+	}
+
 	fileApi := api.FileApi{
-		FileSrv: &FileSrv,
+		FileSrv:     &FileSrv,
+		DownLoadSrv: &downloadSrv,
 	}
 	EncSrv := service.EncSrv{
 		UserRepo: &UserRepo,
@@ -116,6 +126,11 @@ func BuildInjector() (*Injector, func(), error) {
 			},
 		},
 	}
+
+	download := api.DownLoadApi{
+		Srv:     &downloadSrv,
+		FileSrv: &FileSrv,
+	}
 	routerRouter := &router.Router{
 		Auth:          auther,
 		LoginAPI:      &loginApi,
@@ -129,6 +144,7 @@ func BuildInjector() (*Injector, func(), error) {
 		EncAPI:        &EncApi,
 		WorkOrder:     &work,
 		AdminOrder:    &AdminOrder,
+		DownLoad:      &download,
 	}
 
 	go func() {
@@ -138,9 +154,9 @@ func BuildInjector() (*Injector, func(), error) {
 			EndTime := joinTime.Add(time.Hour * 24 * 10)
 			timer.Add("file_"+file.FileID+file.UserID, EndTime, func() {
 				RecycleSrv.DelFiles(context.Background(), file.UserID, file.FileID)
-
 			})
 		}
+
 	}()
 
 	engine := InitGinEngine(routerRouter)
@@ -154,7 +170,7 @@ func BuildInjector() (*Injector, func(), error) {
 		cleanup()
 		cleanup2()
 		cleanup3()
-		timerClean()
+		timer.Close()
 	}, nil
 
 }

@@ -68,7 +68,6 @@ func (api *EncAPI) CheckPassword(c *gin.Context) {
 	ctx := c.Request.Context()
 	pass := c.PostForm("encpass")
 	if pass == "" {
-
 		ginx.ResFail(c)
 		return
 	}
@@ -117,6 +116,7 @@ func (api *EncAPI) LoadencList(c *gin.Context) {
 	ctx := c.Request.Context()
 	pageNo := c.DefaultPostForm("pageNo", "1")
 	pageSize := c.DefaultPostForm("pageSize", "10")
+	fileNameFuzzy := c.DefaultPostForm("fileNameFuzzy", "")
 	if pageNo == "" {
 		pageNo = "1"
 	}
@@ -136,7 +136,8 @@ func (api *EncAPI) LoadencList(c *gin.Context) {
 			PageNo:   int(PageNo),
 			PageSize: int(PageSize),
 		},
-		Secure: true,
+		FileNameFuzzy: fileNameFuzzy,
+		Secure:        true,
 	}
 
 	if err != nil {

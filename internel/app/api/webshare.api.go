@@ -6,17 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"onlineCLoud/internel/app/config"
 	"onlineCLoud/internel/app/dao/dto"
-	"onlineCLoud/internel/app/dao/redisx"
 	"onlineCLoud/internel/app/ginx"
 	"onlineCLoud/internel/app/schema"
 	"onlineCLoud/internel/app/service"
-	"onlineCLoud/pkg/cache"
 	"onlineCLoud/pkg/contextx"
-	hdfsUtil "onlineCLoud/pkg/util/hdfs"
-	"onlineCLoud/pkg/util/random"
-	"os"
 	"strings"
 	"time"
 
@@ -28,9 +22,10 @@ const sessionKey = "webShare_Key"
 const StandTime = "2006-01-02 15:04:05"
 
 type WebShareApi struct {
-	UserSrv  *service.UserSrv
-	ShareSrv *service.ShareSrv
-	FileSrv  *service.FileSrv
+	UserSrv     *service.UserSrv
+	ShareSrv    *service.ShareSrv
+	FileSrv     *service.FileSrv
+	DownLoadSrv *service.DownLoadSrv
 }
 
 func (api *WebShareApi) GetShareLoginInfo(c *gin.Context) {
@@ -192,6 +187,7 @@ func (api *WebShareApi) GetFile(c *gin.Context) {
 
 	ginx.ResData(c, 200, body)
 }
+
 func (api *WebShareApi) CreateDownloadUrl(c *gin.Context) {
 
 	ctx := c.Request.Context()
@@ -213,68 +209,18 @@ func (api *WebShareApi) CreateDownloadUrl(c *gin.Context) {
 		ginx.ResJson(c, 600, "", "操作错误", "fail")
 		return
 	}
-	code := random.GetStrRandom(50)
 
-	dto := dto.DownloadDto{
-		Code:     code,
-		FileName: file.FileName,
-		Path:     file.FilePath,
+	currentime := time.Now().Unix()
+	code := fmt.Sprintf("%v_%v_%v", file.UserID, currentime, file.FileID)
+
+	err = api.DownLoadSrv.CreateDownLoad(ctx, file.UserID, file.FileID, file.FilePath, code)
+	if err != nil {
+		ginx.ResFailWithMessage(c, err.Error())
+		return
 	}
-	v, _ := json.Marshal(dto)
-	rdx := redisx.NewClient()
-	rdx.Set(ctx, fmt.Sprintf("download:%v", code), string(v), time.Duration(30)*time.Minute)
+
 	ginx.ResOkWithData(c, code)
 
-}
-
-func (api *WebShareApi) Download(c *gin.Context) {
-
-	ctx := c.Request.Context()
-	code := c.Param("code")
-	if len(code) == 0 {
-		ginx.ResFail(c)
-		return
-	}
-
-	var dto dto.DownloadDto
-	rdx := redisx.NewClient()
-	str, err := rdx.Get(ctx, fmt.Sprintf("download:%v", code))
-	if err != nil || len(str) == 0 {
-		ginx.ResFailWithMessage(c, "文件不存在")
-		return
-	}
-
-	api.FileSrv.Timer.Add("local_cache_delete"+dto.Path, time.Now().Add(time.Hour*24), func() {
-		os.RemoveAll(dto.Path)
-	})
-	api.FileSrv.Timer.Add("hdfs_cache_delete"+dto.Path, time.Now().Add(time.Hour*24*7), func() {
-		client, err := hdfsUtil.NewClient("172.20.0.2:9000")
-		if err != nil {
-			panic(err)
-		}
-		client.DeleteFile("/" + dto.Path)
-	})
-
-	json.Unmarshal([]byte(str), &dto)
-
-	cr := cache.NewCacheReader(dto.Path)
-	reader, err := cr.Read()
-	if err != nil {
-		c.String(http.StatusNotFound, err.Error())
-		return
-	}
-	defer reader.Close()
-
-	json.Unmarshal([]byte(str), &dto)
-
-	limitedReader := &RateLimitedReader{
-		R:     reader,
-		Limit: int64(config.C.Download.Limit) * 1024,
-	}
-	c.Header("Content-Length", fmt.Sprintf("%d", dto.FileSize))
-	c.Writer.Header().Set("Content-Type", "application/octet-stream")
-	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", dto.FileName))
-	http.ServeContent(c.Writer, c.Request, dto.FileName, dto.Modi, limitedReader)
 }
 
 func (api *WebShareApi) SaveShare(c *gin.Context) {

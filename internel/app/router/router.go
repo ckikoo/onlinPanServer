@@ -27,6 +27,7 @@ type Router struct {
 	EncAPI        *api.EncAPI
 	WorkOrder     *api.WorkOrderApi
 	AdminOrder    *admin.AdminOrderApi
+	DownLoad      *api.DownLoadApi
 }
 
 func (a *Router) Regitser(app *gin.Engine) error {
@@ -96,9 +97,8 @@ func (a *Router) RegisterApI(app *gin.Engine) {
 	g.POST("/file/changeFileFolder", a.FileApi.ChangeFileFolder)
 	g.POST("/file/loadAllFolder", a.FileApi.LoadAllFolder)
 	g.POST("/file/createDownloadUrl/:fid", a.FileApi.CreateDownloadUrl)
-	g.GET("/file/download/:code", a.FileApi.Download)
+	g.GET("/download/:code", a.DownLoad.Download)
 
-	// 回收站
 	g.POST("/recycle/loadRecycleList", a.RecycleApi.GetFileList)
 	g.POST("/recycle/recoverFile", a.RecycleApi.RecoverFile)
 	g.POST("/recycle/delFile", a.RecycleApi.DelFiles)
@@ -118,7 +118,6 @@ func (a *Router) RegisterApI(app *gin.Engine) {
 	g.GET("/showShare/getFile/:shareId/:fileId", a.WebShareApi.GetFile)
 	g.GET("/showShare/ts/getVideoInfo/:shareId/:fid", a.WebShareApi.GetVideoInfo)
 	g.POST("/showShare/createDownloadUrl/:shareId/:fileId", a.WebShareApi.CreateDownloadUrl)
-	g.GET("/showShare/download/:code", a.WebShareApi.Download)
 	g.POST("/showShare/saveShare", a.WebShareApi.SaveShare)
 
 	// 加密文件
@@ -133,7 +132,9 @@ func (a *Router) RegisterApI(app *gin.Engine) {
 	// issue
 	g.POST("/workOrder/create", a.WorkOrder.Create)
 	g.POST("/workOrder/get", a.WorkOrder.LoadWorkList)
+	g.POST("/workOrder/delete", a.WorkOrder.Delete)
 	g.POST("/admin/workOrder/get", a.AdminOrder.LoadWorkList)
-	g.POST("/workOrder/update", a.WorkOrder.Update)
+	g.POST("/workOrder/update", a.WorkOrder.UpdateWorkOrder)
 	g.POST("/admin/workOrder/update", a.AdminOrder.Update)
+	g.POST("/admin/workOrder/delete", a.AdminOrder.Delete)
 }

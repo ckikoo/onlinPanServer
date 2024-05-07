@@ -100,6 +100,12 @@ func (a *UserRepo) Update(ctx context.Context, id string, item User) error {
 	return errors.WithStack(result.Error)
 }
 
+func (a *UserRepo) UpdateUserStatus(ctx context.Context, id string, status int) error {
+
+	result := GetUserDB(ctx, a.DB).Where("user_id=?", id).Update("status", status)
+	return errors.WithStack(result.Error)
+}
+
 func (a *UserRepo) Delete(ctx context.Context, id string) error {
 	result := GetUserDB(ctx, a.DB).Where("id=?", id).Delete(User{})
 	return errors.WithStack(result.Error)

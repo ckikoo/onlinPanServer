@@ -13,6 +13,14 @@ type AdminApi struct {
 	AdminSrv *service.AdminSrv
 }
 
+func (a *AdminApi) UpdateUserStatus(c *gin.Context) {
+	userId := c.Request.PostFormValue("userId")
+	status := c.Request.PostFormValue("status")
+
+	a.
+
+}
+
 func (a *AdminApi) LoadUserList(c *gin.Context) {
 	ctx := c.Request.Context()
 	pageNo := c.Request.PostFormValue("pageNo")

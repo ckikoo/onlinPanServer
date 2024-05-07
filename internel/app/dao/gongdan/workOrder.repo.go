@@ -2,6 +2,7 @@ package workOrder
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"onlineCLoud/internel/app/dao/util"
 	"onlineCLoud/internel/app/schema"
@@ -80,11 +81,22 @@ func (a *WorkOrderRepo) Update(ctx context.Context, id string, item *WorkOrder) 
 	return nil
 }
 
-func (a *WorkOrderRepo) Delete(ctx context.Context, id string, item WorkOrder) error {
+func (a *WorkOrderRepo) Delete(ctx context.Context, id string, orderId string) error {
 	// 执行删除操作
-	result := GetWorkOrderDB(ctx, a.DB).Where("WorkOrderId=?", id).Delete(item)
+	db := GetWorkOrderDB(ctx, a.DB)
+
+	// 执行删除操作
+	result := db.Where(&WorkOrder{UserId: id, WorkOrderId: orderId}).Delete(&WorkOrder{})
 	if result.Error != nil {
-		return errors.Wrap(result.Error, "failed to delete work order") // 返回错误
+		// 错误处理
+		fmt.Printf("result.Error: %v\n", result.Error)
+		return errors.Wrap(result.Error, "删除错误")
 	}
+
+	// 验证删除是否成功
+	if result.RowsAffected == 0 {
+		return errors.New("no work order deleted")
+	}
+
 	return nil
 }

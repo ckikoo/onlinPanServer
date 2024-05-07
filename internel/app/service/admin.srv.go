@@ -41,23 +41,29 @@ func (a *AdminSrv) LoadUserList(ctx context.Context, pageNo int, pageSize int, n
 	return res, err
 }
 
-func (srv *AdminSrv) LoadFileList(ctx context.Context, pageNo, pageSize int, fileNameFuzzy, filePid string) (interface{}, error) {
-	q := schema.PageParams{PageNo: pageNo, PageSize: pageSize}
-	item := schema.RequestFileListPage{
-		PageParams:    q,
-		FileNameFuzzy: fileNameFuzzy,
-		FilePid:       filePid,
-	}
-	filelist, err := srv.FileRepo.GetFileList(ctx, "*", &item, true)
+func (a *AdminSrv) UpdateUserStatus(ctx context.Context, uid string, status int) (*schema.ListResult, error) {
+
+	userList, err := a.UserRepo.LoadUserList(ctx, &q, nickNameFuzzy, status)
 	if err != nil {
 		return nil, err
 	}
-	sz := int64(len(filelist))
-	res := schema.ListResult{
-		Parms:      &q,
-		TotalCount: sz,
-		PageTotal:  sz / int64(q.PageSize),
-		List:       filelist,
+
+	for i, v := range userList {
+		v.Avatar = ""
+		userList[i] = v
 	}
-	return res, nil
+
+	total, err := a.UserRepo.GetUserListTotal(ctx, &q, nickNameFuzzy, status)
+
+	res := new(schema.ListResult)
+	res.PageTotal = (total + int64(pageSize)/2) / int64(pageSize)
+	res.Parms = &schema.PageParams{
+		PageNo:   pageNo,
+		PageSize: pageSize,
+	}
+	res.List = userList
+
+	res.TotalCount = total
+
+	return res, err
 }
