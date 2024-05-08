@@ -2,7 +2,6 @@ package api
 
 import (
 	"fmt"
-	"log"
 	"onlineCLoud/internel/app/ginx"
 	"onlineCLoud/internel/app/schema"
 	"onlineCLoud/internel/app/service"
@@ -28,7 +27,7 @@ func (f *FileApi) GetFileList(c *gin.Context) {
 	}
 	err := ginx.ParseForm(c, &item)
 	if err != nil {
-		log.Default().Printf("请求继续失败,接口GETFILELIST %v\n", err)
+
 		ginx.ResFailWithMessage(c, "数据格式有误")
 		return
 	}
@@ -165,7 +164,6 @@ func (f *FileApi) FileRename(c *gin.Context) {
 		return
 	}
 	if fileId == "" || filePId == "" {
-		log.Println("用户参数不合法")
 		ginx.ResFail(c)
 		return
 	}
@@ -184,7 +182,6 @@ func (f *FileApi) LoadAllFolder(c *gin.Context) {
 	filePid := c.PostForm("filePid")
 	currentFileIds := c.PostForm("currentFileIds")
 	if filePid == "" {
-		log.Println("LoadAllFolder 用户参数不合法")
 		ginx.ResFail(c)
 	}
 	files, err := f.FileSrv.LoadAllFolder(ctx, contextx.FromUserID(ctx), filePid, currentFileIds)
@@ -203,7 +200,6 @@ func (f *FileApi) ChangeFileFolder(c *gin.Context) {
 	fileIds := c.Request.FormValue("fileIds")
 	filePid := c.Request.FormValue("filePid")
 	if filePid == "" || fileIds == "" {
-		log.Println("LoadAllFolder 用户参数不合法")
 		ginx.ResFail(c)
 	}
 	fmt.Println(filePid)
