@@ -22,7 +22,6 @@ type Option func(*options)
 
 func SetConfigFile(s string) Option {
 	return func(o *options) {
-		fmt.Printf("%s\n", s)
 		o.ConfigFile = s
 	}
 }

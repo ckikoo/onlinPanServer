@@ -7,6 +7,7 @@ import (
 	"onlineCLoud/internel/app/schema"
 	"onlineCLoud/internel/app/service"
 	"onlineCLoud/pkg/contextx"
+	"onlineCLoud/pkg/timer"
 
 	"time"
 
@@ -61,7 +62,7 @@ func (f *FileApi) CancelUpload(c *gin.Context) {
 	ctx := c.Request.Context()
 	fileId := c.PostForm("fileId")
 	m := make(map[string]interface{}, 0)
-	item := f.FileSrv.Timer.Del(fileId + contextx.FromUserID(ctx))
+	item := timer.GetInstance().Del(fileId + contextx.FromUserID(ctx))
 	item.Action()
 	m["status"] = "OK"
 

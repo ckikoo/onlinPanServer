@@ -1,8 +1,6 @@
 package json
 
 import (
-	"fmt"
-
 	jsoniter "github.com/json-iterator/go"
 )
 
@@ -20,7 +18,6 @@ var (
 func MarshalToString(v interface{}) string {
 	s, err := jsoniter.MarshalToString(v)
 	if err != nil {
-		fmt.Printf("err: %v\n", err)
 		return ""
 	}
 	return s

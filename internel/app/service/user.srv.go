@@ -93,7 +93,6 @@ func (a *UserSrv) GetUserAvatar(w http.ResponseWriter, r *http.Request, uid stri
 	var item string
 	err := a.UserRepo.FindAvatarByName(r.Context(), uid, &item)
 	if err != nil {
-		fmt.Printf("err: %v\n", err)
 		return err
 	}
 	if item == "" {

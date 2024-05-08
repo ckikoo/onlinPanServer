@@ -48,7 +48,6 @@ func (a *LoginSrv) Login(ctx context.Context, username, password string, isadmin
 	rd := redisx.NewClient()
 	err = rd.Set(ctx, "user:space:"+username, v, time.Duration(10)*time.Minute)
 	if err != nil {
-		fmt.Printf("err: %v\n", err)
 		return "", err
 	}
 	item.LastJoinTime = time.Now()

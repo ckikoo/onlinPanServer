@@ -58,8 +58,7 @@ func BuildInjector() (*Injector, func(), error) {
 		Db: db,
 	}
 	FileSrv := service.FileSrv{
-		Repo:  &fileRepo,
-		Timer: timer,
+		Repo: &fileRepo,
 	}
 	downloadRepo := download.DownloadRepo{
 		Db: db,

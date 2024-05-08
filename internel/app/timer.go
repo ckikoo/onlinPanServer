@@ -5,6 +5,7 @@ import (
 	"onlineCLoud/internel/app/define"
 	"onlineCLoud/pkg/cache/file/hadoop"
 	"onlineCLoud/pkg/cache/file/local"
+	logger "onlineCLoud/pkg/log"
 	"onlineCLoud/pkg/timer"
 	"os"
 	"path/filepath"
@@ -17,14 +18,14 @@ func cleanLocalExpCache() {
 
 	infos, err := lc.ReadDir("./upload")
 	if err != nil {
-		fmt.Printf("failed to read directory: %v\n", err)
+		logger.Log("ERROR", "failed to read directory", "err", err.Error())
 		return
 	}
 
 	for _, file := range infos {
 		info, err := file.Info()
 		if err != nil {
-			fmt.Printf("failed to get file info: %v\n", err)
+			logger.Log("ERROR", "failed to get file info", "err", err.Error())
 			continue
 		}
 

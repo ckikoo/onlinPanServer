@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"onlineCLoud/internel/app/dao/file"
 	"onlineCLoud/internel/app/dao/redisx"
 	"onlineCLoud/internel/app/dao/share"
@@ -11,6 +12,7 @@ import (
 	"onlineCLoud/pkg/cache"
 	"onlineCLoud/pkg/contextx"
 	logger "onlineCLoud/pkg/log"
+	"onlineCLoud/pkg/timer"
 	fileUtil "onlineCLoud/pkg/util/file"
 	"strings"
 	"time"
@@ -221,7 +223,7 @@ func (f *RecycleSrv) RecoverFile(ctx context.Context, uid string, fileIds string
 	}
 
 	for _, fid := range fildIdArray {
-		f.Timer.Del("file_" + fid + uid)
+		timer.GetInstance().Del(fmt.Sprintf(define.RecycleDelTimerKey, contextx.FromUserID(ctx)+fid))
 	}
 
 	return nil

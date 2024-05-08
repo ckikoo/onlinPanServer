@@ -3,7 +3,6 @@ package file
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"onlineCLoud/internel/app/dao/util"
 	"onlineCLoud/internel/app/schema"
@@ -145,7 +144,7 @@ func (f *FileRepo) CheckFileName(ctx context.Context, filePId string, uid string
 	}
 
 	if err := db.First(&file).Error; err != nil {
-		fmt.Printf("err: %v\n", err)
+
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return &file, nil
 		} else {

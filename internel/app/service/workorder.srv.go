@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"errors"
-	"fmt"
 	workOrder "onlineCLoud/internel/app/dao/gongdan"
 	"onlineCLoud/internel/app/schema"
 	"onlineCLoud/pkg/util/uuid"
@@ -40,7 +39,6 @@ func (srv *WorkOrderSrv) LoadWorkListList(ctx context.Context, PageNo int, PageS
 }
 
 func (srv *WorkOrderSrv) CreateWorkOrder(ctx context.Context, uid string, title, content string) error {
-	fmt.Printf("uid: %v\n", uid)
 	item := workOrder.WorkOrder{
 		WorkOrderId: uuid.MustString(),
 		UserId:      uid,

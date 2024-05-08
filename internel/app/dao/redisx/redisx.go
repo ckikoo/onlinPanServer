@@ -48,7 +48,6 @@ func (cli *Redisx) KeepAliveWorker(ctx context.Context, key string, val string, 
 		case <-waiter:
 			res := cli.cli.Eval(DownLoadkeepAlive, []string{key}, val, exp)
 			if res.Err() != nil {
-				fmt.Printf("res: %v\n", res.Err())
 				panic(res)
 			}
 
@@ -210,7 +209,6 @@ func (r *Redisx) HGet(ctx context.Context, key string, fields string) (string, e
 func (r *Redisx) HCheck(ctx context.Context, key string, fields string) (bool, error) {
 	result, err := r.cli.HExists(key, fields).Result()
 	if err != nil {
-		fmt.Printf("redisx err: %v\n", err)
 		return false, err
 	}
 

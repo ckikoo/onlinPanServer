@@ -59,7 +59,7 @@ func (mail Emailx) SendMsgWithText(ctx context.Context, dest string, subject str
 	return mail.p.Send(e, 10*time.Second)
 }
 func (mail Emailx) SendMsgwithHtml(ctx context.Context, dest string, subject string, msg string) error {
-	fmt.Printf("%v", mail.p)
+
 	e := email.NewEmail()
 	build := strings.Builder{}
 	build.WriteString("online cloud<")

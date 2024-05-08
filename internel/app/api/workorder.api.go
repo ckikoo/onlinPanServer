@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"onlineCLoud/internel/app/ginx"
 	"onlineCLoud/internel/app/service"
 	"onlineCLoud/pkg/contextx"
@@ -73,8 +72,7 @@ func (a *WorkOrderApi) Create(c *gin.Context) {
 		ginx.ResFail(c)
 		return
 	}
-	uid := contextx.FromUserID(ctx)
-	fmt.Printf("uid: %v\n", uid)
+
 	err := a.Srv.CreateWorkOrder(ctx, contextx.FromUserID(ctx), title, content)
 	if err != nil {
 		ginx.ResFail(c)

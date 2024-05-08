@@ -88,7 +88,6 @@ func (srv *FileSrv) UploadFile(c *gin.Context, uid string, fileinfo schema.FileU
 			logger.Log("WARN", contextx.FromUserID(c.Request.Context()), err.Error())
 			return nil, err
 		}
-		fmt.Printf("file: %v\n", file)
 		if file != nil && file.FileName != "" {
 			file.FileName = fileUtil.Rename(fileinfo.FileName)
 		}
@@ -423,7 +422,7 @@ func (f *FileSrv) GetImage(w http.ResponseWriter, r *http.Request, name string) 
 	cr := cache.NewCacheReader(path)
 	reader, err := cr.Read()
 	if err != nil {
-		fmt.Printf("err: %v\n", err)
+		logger.Log("ERROR", "cache read error", err.Error())
 		w.WriteHeader(404)
 		return
 	}

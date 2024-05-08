@@ -34,8 +34,6 @@ func FileMerge(tempDir, dest string) error {
 	}
 	finalFile, err := FileCreate(dest, os.O_WRONLY|os.O_CREATE)
 	if err != nil {
-		fmt.Printf("dest: %v\n", dest)
-		fmt.Printf("err: %v\n", err)
 		return err
 	}
 	defer finalFile.Close()
