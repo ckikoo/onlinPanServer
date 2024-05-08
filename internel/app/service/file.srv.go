@@ -164,7 +164,7 @@ func (srv *FileSrv) UploadFile(c *gin.Context, uid string, fileinfo schema.FileU
 	tempDir := fmt.Sprintf("temp/%v/%v", uid, fileid)
 	filePath := fmt.Sprintf("%v/%v", tempDir, fileinfo.ChunkIndex)
 	if fileinfo.ChunkIndex == 0 {
-		srv.Timer.Add(fileid+contextx.FromUserID(c.Request.Context()), time.Now().Add(time.Minute*30), func() {
+		srv.Timer.Add(fileid+contextx.FromUserID(c.Request.Context()), time.Now().Add(time.Hour*12), func() {
 			srv.CancelUpload(c, contextx.FromUserID(c.Request.Context()), fileid)
 		})
 	}
@@ -431,8 +431,8 @@ func (f *FileSrv) DelFiles(ctx context.Context, uid string, fileId string) error
 }
 
 // 创建视频封面
-func CreateCover4Video(path string, width int, desc string) error {
-	cmd := exec.Command("/usr/bin/ffmpeg", "-i", path, "-y", "-vframes", "1", "-vf", fmt.Sprintf("scale=%d:%d", width, width), desc)
+func CreateCover4Video(path string, width int, dest string) error {
+	cmd := exec.Command("/usr/bin/ffmpeg", "-i", path, "-y", "-vframes", "1", "-loglevel", "quiet", "-vf", fmt.Sprintf("scale=%d:%d", width, width), dest)
 	cmd.Stderr = os.Stderr
 	if _, err := processutil.ExecuteCommand(cmd, false); err != nil {
 		log.Printf("create cover error: %v", err)

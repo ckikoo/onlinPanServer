@@ -103,7 +103,10 @@ func (a *UserRepo) Update(ctx context.Context, id string, item User) error {
 func (a *UserRepo) UpdateUserStatus(ctx context.Context, id string, status int) error {
 
 	result := GetUserDB(ctx, a.DB).Where("user_id=?", id).Update("status", status)
-	return errors.WithStack(result.Error)
+	if result.RowsAffected == 0 {
+		return errors.New("更新失败")
+	}
+	return nil
 }
 
 func (a *UserRepo) Delete(ctx context.Context, id string) error {

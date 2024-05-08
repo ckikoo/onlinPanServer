@@ -1,5 +1,5 @@
-/usr/local/nginx/sbin/nginx
+docker start mysql
 
-screen -S vue
-cd /home/vue/easypan-front
-npm run dev
+docker start hadoop1
+
+docker exec -it start-all.sh&&jps

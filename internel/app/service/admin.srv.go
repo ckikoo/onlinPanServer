@@ -41,29 +41,12 @@ func (a *AdminSrv) LoadUserList(ctx context.Context, pageNo int, pageSize int, n
 	return res, err
 }
 
-func (a *AdminSrv) UpdateUserStatus(ctx context.Context, uid string, status int) (*schema.ListResult, error) {
+func (a *AdminSrv) UpdateUserStatus(ctx context.Context, uid string, status int) error {
 
-	userList, err := a.UserRepo.LoadUserList(ctx, &q, nickNameFuzzy, status)
+	err := a.UserRepo.UpdateUserStatus(ctx, uid, status)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	for i, v := range userList {
-		v.Avatar = ""
-		userList[i] = v
-	}
-
-	total, err := a.UserRepo.GetUserListTotal(ctx, &q, nickNameFuzzy, status)
-
-	res := new(schema.ListResult)
-	res.PageTotal = (total + int64(pageSize)/2) / int64(pageSize)
-	res.Parms = &schema.PageParams{
-		PageNo:   pageNo,
-		PageSize: pageSize,
-	}
-	res.List = userList
-
-	res.TotalCount = total
-
-	return res, err
+	return err
 }

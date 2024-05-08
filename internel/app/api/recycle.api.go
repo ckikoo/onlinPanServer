@@ -42,6 +42,7 @@ func (f *RecycleApi) GetFileList(c *gin.Context) {
 
 	ginx.ResOkWithData(c, res)
 }
+
 func (f *RecycleApi) DelFiles(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -56,8 +57,6 @@ func (f *RecycleApi) DelFiles(c *gin.Context) {
 		ginx.ResFailWithMessage(c, "删除失败")
 		return
 	}
-
-	// f.RecycleSrv.Timer
 
 	ginx.ResOk(c)
 }

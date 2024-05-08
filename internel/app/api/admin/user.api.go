@@ -14,11 +14,16 @@ type AdminApi struct {
 }
 
 func (a *AdminApi) UpdateUserStatus(c *gin.Context) {
+	ctx := c.Request.Context()
 	userId := c.Request.PostFormValue("userId")
 	status := c.Request.PostFormValue("status")
 
-	a.
-
+	st, err := strconv.ParseInt(status, 10, 32)
+	if err != nil {
+		ginx.ResFailWithMessage(c, err.Error())
+		return
+	}
+	a.AdminSrv.UpdateUserStatus(ctx, userId, int(st))
 }
 
 func (a *AdminApi) LoadUserList(c *gin.Context) {
