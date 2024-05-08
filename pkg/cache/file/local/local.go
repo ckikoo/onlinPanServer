@@ -56,3 +56,17 @@ func (lc *LocalCache) Delete(filepath string) error {
 
 	return nil
 }
+
+func (lc *LocalCache) ReadDir(filePath string) ([]os.DirEntry, error) {
+	infos, err := os.ReadDir(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	return infos, nil
+
+}
+
+func (lc *LocalCache) GetFileInfo(filePath string) (os.FileInfo, error) {
+	return os.Stat(filePath)
+}

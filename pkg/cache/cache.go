@@ -9,6 +9,7 @@ import (
 	"onlineCLoud/pkg/cache/file/oss"
 	"onlineCLoud/pkg/errors"
 	"onlineCLoud/pkg/file"
+	logger "onlineCLoud/pkg/log"
 )
 
 // CacheReader 定义了一个缓存读取器
@@ -100,12 +101,12 @@ func (cr *CacheReader) Read() (*file.AbstractFile, error) {
 	return nil, errors.New("file not found in any cache")
 }
 
-func (cr *CacheReader) Delete(filePath string) error {
+func (cr *CacheReader) Delete() error {
 
 	for _, do := range cr.Caches {
 
-		if err := do.Delete(filePath); err != nil {
-			// 记录日志
+		if err := do.Delete(cr.FilePath); err != nil {
+			logger.Log("ERROR", "删除文件错误", err.Error())
 			continue
 		}
 

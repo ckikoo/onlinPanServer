@@ -2,7 +2,6 @@ package timer
 
 import (
 	"container/heap"
-	"fmt"
 	"sync"
 	"time"
 )
@@ -116,7 +115,6 @@ func (tm *TimerManager) Del(key interface{}) *TimeItem {
 
 	for i, item := range *tm.timerHeap {
 		if item.Key == key {
-			fmt.Println("1111")
 			return heap.Remove(tm.timerHeap, i).(*TimeItem)
 		}
 	}

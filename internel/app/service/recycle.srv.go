@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"log"
 	"onlineCLoud/internel/app/dao/file"
 	"onlineCLoud/internel/app/dao/redisx"
 	"onlineCLoud/internel/app/dao/share"
@@ -11,7 +10,7 @@ import (
 	"onlineCLoud/internel/app/schema"
 	"onlineCLoud/pkg/cache"
 	"onlineCLoud/pkg/contextx"
-	"onlineCLoud/pkg/timer"
+	logger "onlineCLoud/pkg/log"
 	fileUtil "onlineCLoud/pkg/util/file"
 	"strings"
 	"time"
@@ -20,8 +19,7 @@ import (
 )
 
 type RecycleSrv struct {
-	Repo  *file.FileRepo
-	Timer *timer.TimerManager
+	Repo *file.FileRepo
 }
 
 func (f *RecycleSrv) LoadListFiles(ctx context.Context, uid string, pageNo, pageSize int64) (*schema.ListResult, error) {
@@ -76,6 +74,7 @@ func (f *RecycleSrv) findAllSubAllFileMd5AndIdList(ctx context.Context, fileIdLi
 
 	fileLists, err := f.Repo.GetFileList(ctx, userID, &query, false)
 	if err != nil || fileLists == nil || len(fileLists) == 0 {
+
 		return
 	}
 
@@ -149,7 +148,7 @@ func (f *RecycleSrv) delfileToUpdateSpace(ctx context.Context, userid string) {
 	var total uint64
 	err := f.Repo.GetTotalUseSpace(ctx, userid, &total)
 	if err != nil {
-		log.Default().Printf("del file update space error:%v", err)
+		logger.Log("WARN", err.Error())
 		return
 	}
 	urv.UserRepo.UpdateSpace(ctx, contextx.FromUserEmail(ctx), total, true)
@@ -166,10 +165,12 @@ func (f *RecycleSrv) RecoverFile(ctx context.Context, uid string, fileIds string
 	}
 	fileInfoList, err := f.Repo.GetFileList(ctx, uid, &query, false)
 	if err != nil {
+		logger.Log("WARN", err.Error())
 		return err
 	}
 
 	if fileInfoList == nil || len(fileInfoList) == 0 {
+		logger.Log("INFO", "没有找到文件")
 		return nil
 	}
 

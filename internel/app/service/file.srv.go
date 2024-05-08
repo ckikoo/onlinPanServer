@@ -6,8 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
+	"onlineCLoud/internel/app/config"
 	"onlineCLoud/internel/app/dao/file"
 	"onlineCLoud/internel/app/dao/redisx"
 	"onlineCLoud/internel/app/dao/user"
@@ -15,6 +15,7 @@ import (
 	"onlineCLoud/internel/app/schema"
 	"onlineCLoud/pkg/cache"
 	"onlineCLoud/pkg/contextx"
+	logger "onlineCLoud/pkg/log"
 	"onlineCLoud/pkg/timer"
 	fileUtil "onlineCLoud/pkg/util/file"
 	hdfsUtil "onlineCLoud/pkg/util/hdfs"
@@ -24,6 +25,7 @@ import (
 	util "onlineCLoud/pkg/util/uuid"
 	"os"
 	"os/exec"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -33,8 +35,7 @@ import (
 )
 
 type FileSrv struct {
-	Repo  *file.FileRepo
-	Timer *timer.TimerManager
+	Repo *file.FileRepo
 }
 
 func (f *FileSrv) LoadListFiles(ctx context.Context, uid string, p *schema.RequestFileListPage) (*schema.ListResult, error) {
@@ -47,11 +48,13 @@ func (f *FileSrv) LoadListFiles(ctx context.Context, uid string, p *schema.Reque
 
 	files, err := f.Repo.GetFileList(ctx, uid, p, true)
 	if err != nil {
+		logger.Log("WARN", contextx.FromUserID(ctx), err.Error())
 		return nil, err
 	}
 
 	total, err := f.Repo.GetFileListTotal(ctx, uid, p)
 	if err != nil {
+		logger.Log("WARN", contextx.FromUserID(ctx), err.Error())
 		return nil, err
 	}
 
@@ -60,31 +63,6 @@ func (f *FileSrv) LoadListFiles(ctx context.Context, uid string, p *schema.Reque
 	res.PageTotal = (total + int64(p.GetPageSize())/2) / int64(p.GetPageSize())
 	res.TotalCount = total
 	return &res, nil
-}
-
-func (srv *FileSrv) UploadFilePre(c context.Context, email string, fileSize uint64) (map[string]any, error) {
-	resMap := make(map[string]interface{}, 0)
-
-	userdb := user.GetUserDB(c, srv.Repo.Db)
-	usrv := UserSrv{UserRepo: &user.UserRepo{
-		DB: userdb,
-		Rd: redisx.NewClient(),
-	}}
-	spaceMap := usrv.GetUserSpace(c, email)
-	if spaceMap == nil {
-		resMap["status"] = "INTERNET_ERROR"
-		return resMap, errors.New("no found info")
-	}
-
-	var space user.UserSpace
-	json.Unmarshal([]byte(fmt.Sprintf("%v", spaceMap)), &space)
-	if space.UseSpace+fileSize > space.TotalSpace {
-		resMap["status"] = Uer_NO_SPACE
-	} else {
-		resMap["status"] = Uer_SPACE_SA
-	}
-
-	return resMap, nil
 }
 
 // 返回状态集， error
@@ -99,6 +77,7 @@ func (srv *FileSrv) UploadFile(c *gin.Context, uid string, fileinfo schema.FileU
 	json.Unmarshal([]byte(s), &space)
 
 	if space.UseSpace+uint64(fileinfo.FileSize) > space.TotalSpace {
+		logger.Log("INFO", "用户上传文件超过剩余大小")
 		statusMap["status"] = "fail"
 		statusMap["errorMsg"] = "空间不足"
 		return statusMap, nil
@@ -106,6 +85,7 @@ func (srv *FileSrv) UploadFile(c *gin.Context, uid string, fileinfo schema.FileU
 	if fileinfo.ChunkIndex == 0 {
 		file, err := srv.Repo.CheckFileName(c.Request.Context(), fileinfo.FilePid, uid, fileinfo.FileName, "0")
 		if err != nil {
+			logger.Log("WARN", contextx.FromUserID(c.Request.Context()), err.Error())
 			return nil, err
 		}
 		fmt.Printf("file: %v\n", file)
@@ -115,6 +95,7 @@ func (srv *FileSrv) UploadFile(c *gin.Context, uid string, fileinfo schema.FileU
 
 		file, err = srv.Repo.GetFileByMd5(c, fileinfo.FileMd5)
 		if err != nil {
+			logger.Log("WARN", contextx.FromUserID(c.Request.Context()), err.Error())
 			return nil, err
 		}
 
@@ -129,7 +110,8 @@ func (srv *FileSrv) UploadFile(c *gin.Context, uid string, fileinfo schema.FileU
 			file.RecoveryTime = ""
 			file.UserID = uid
 			if err := srv.Repo.UploadFile(c, file); err != nil {
-				return nil, nil
+				logger.Log("WARN", contextx.FromUserID(c.Request.Context()), err.Error())
+				return nil, err
 			}
 			usrv.UpdateSpace(c, contextx.FromUserEmail(c.Request.Context()), file.FileSize)
 
@@ -141,13 +123,13 @@ func (srv *FileSrv) UploadFile(c *gin.Context, uid string, fileinfo schema.FileU
 
 	fh, err := c.FormFile("file")
 	if err != nil {
-		fmt.Printf("err: %v\n", err)
+		logger.Log("WARN", contextx.FromUserID(c.Request.Context()), err.Error())
 		return nil, err
 	}
 
 	src, err := fh.Open()
 	if err != nil {
-		fmt.Printf("err: %v\n", err)
+		logger.Log("WARN", contextx.FromUserID(c.Request.Context()), err.Error())
 		return nil, err
 	}
 
@@ -164,39 +146,41 @@ func (srv *FileSrv) UploadFile(c *gin.Context, uid string, fileinfo schema.FileU
 	tempDir := fmt.Sprintf("temp/%v/%v", uid, fileid)
 	filePath := fmt.Sprintf("%v/%v", tempDir, fileinfo.ChunkIndex)
 	if fileinfo.ChunkIndex == 0 {
-		srv.Timer.Add(fileid+contextx.FromUserID(c.Request.Context()), time.Now().Add(time.Hour*12), func() {
+		// 设置一个定时器
+		timer.GetInstance().Add(fmt.Sprintf(define.TempCacheTimerKeyPre, fileid+"_"+contextx.FromUserID(c.Request.Context())), time.Now().Add(time.Hour*12), func() {
 			srv.CancelUpload(c, contextx.FromUserID(c.Request.Context()), fileid)
 		})
 	}
 
-	newFile, err := fileUtil.FileCreate(filePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY)
+	newFile, err := fileUtil.FileCreate(filePath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY)
 	if err != nil {
-		fmt.Printf("err: %v\n", err)
-		return nil, errors.New("")
+		logger.Log("ERROR", err.Error())
+		return nil, errors.New("INTERNAL ERROR")
 	}
 	defer newFile.Close()
 	for {
 		n, err := src.Read(buf)
 		if err != nil && err != io.EOF {
-			return nil, errors.ErrUnsupported
+			return nil, errors.New("INTERNAL ERROR")
 		}
 		if n == 0 {
 			break
 		}
 		_, err = newFile.Write(buf)
 		if err != nil {
-			log.Fatal("空间不足")
 			return nil, errors.New("internal error")
 		}
 	}
 	statusMap["fileId"] = fileid
 	statusMap["status"] = FILE_STATUS_TRANSFER
+	// 如果是最后一片
 	if fileinfo.ChunkIndex == fileinfo.Chunks-1 {
-		srv.Timer.Del(fileid + contextx.FromUserID(c.Request.Context()))
+		timer.GetInstance().Del(fmt.Sprintf(define.TempCacheTimerKeyPre, fileid+"_"+contextx.FromUserID(c.Request.Context())))
 		// upload/md5/FileName
 		uploadDir := fmt.Sprintf("upload/%v", fileinfo.FileMd5)
 		uploadFile := fmt.Sprintf("%v/%v", uploadDir, fileinfo.FileMd5+"."+fileUtil.GetFileExt(fileinfo.FileName))
 		if err := fileUtil.FileMerge(tempDir, uploadFile); err != nil {
+			logger.Log("WARN", contextx.FromUserID(c.Request.Context()), err.Error())
 			statusMap["fileId"] = fileid
 			statusMap["status"] = FILE_STATUS_TRANSFER_FAIL
 			return statusMap, nil
@@ -219,18 +203,16 @@ func (srv *FileSrv) UploadFile(c *gin.Context, uid string, fileinfo schema.FileU
 		file.FileCategory = define.FileCategoryStr4ID(ext)
 		usrv.UpdateSpace(c.Request.Context(), contextx.FromUserEmail(c.Request.Context()), file.FileSize)
 		if file.FileType == define.FileTypeVideo {
-			CutFile4Video(fileid, file.FilePath) // 文件切片
+			//视频切片
+			CutFile4Video(fileid, file.FilePath)
 			dest := fmt.Sprintf("%s/%s", uploadDir, file.FileMd5+".png")
-			go func() {
-				CreateCover4Video(file.FilePath, 150, dest)
-			}()
+			// 视频封面
+			CreateCover4Video(file.FilePath, 200, dest)
 			file.FileCover = fmt.Sprintf("%v", file.FileMd5+".png")
 		} else if file.FileType == define.FileTypeImage {
 			//生成缩略图
 			dest := fmt.Sprintf("%s/%s", uploadDir, file.FileMd5+".png")
-			go func() {
-				CreateCover4Video(file.FilePath, 150, dest)
-			}()
+			CreateCover4Video(file.FilePath, 150, dest)
 			file.FileCover = fmt.Sprintf("%v", file.FileMd5+".png")
 		}
 		if err := srv.Repo.UploadFile(c, &file); err != nil {
@@ -250,15 +232,13 @@ func (srv *FileSrv) UploadFile(c *gin.Context, uid string, fileinfo schema.FileU
 		}
 
 		go func() {
-			client, err := hdfsUtil.NewClient("172.20.0.2:9000")
+			client, err := hdfsUtil.NewClient(config.C.Hadoop.Host)
 			if err != nil {
-				log.Default().Printf("error  hdfsUtil newclient error :%v \n", err)
 				return
 			}
 
 			err = client.CopyDirFromLocal(uploadDir, "/"+uploadDir)
 			if err != nil {
-				log.Default().Printf("error hdfsUtil CopyDirFromLocal %v to %v err: %v\n", uploadDir, "/"+uploadDir, err)
 				return
 			}
 		}()
@@ -266,13 +246,13 @@ func (srv *FileSrv) UploadFile(c *gin.Context, uid string, fileinfo schema.FileU
 		go func() {
 			ossClient, err := ossUtil.NewClient()
 			if err != nil {
-				log.Default().Printf("error  ossUtil newclient error: %v\n", err)
+				logger.Log("ERROR", err.Error())
 				return
 			}
 
 			err = ossClient.CopyDirFromLocal(uploadDir, uploadDir)
 			if err != nil {
-				log.Default().Printf("error ossUtil CopyDirFromLocal %v to %v error %v\n", uploadDir, "/"+uploadDir, err)
+				logger.Log("ERROR", err.Error())
 				return
 			}
 		}()
@@ -285,8 +265,6 @@ func (srv *FileSrv) UploadFile(c *gin.Context, uid string, fileinfo schema.FileU
 func CutFile4Video(fileId, videoFilePath string) error {
 	path, err := fileUtil.NewDir(videoFilePath[:strings.LastIndex(videoFilePath, "/")])
 	if err != nil {
-
-		log.Printf("cutfile4video error creating video folder: %s", err)
 		return err
 	}
 
@@ -295,7 +273,6 @@ func CutFile4Video(fileId, videoFilePath string) error {
 
 	// 指定命令生成 .ts 文件
 	if _, err = processutil.ExecuteCommand(cmd, false); err != nil {
-		log.Printf("cutfile4video error during .ts file generation: %v", err)
 		return err
 	}
 
@@ -304,13 +281,11 @@ func CutFile4Video(fileId, videoFilePath string) error {
 
 	// 分片
 	if _, err := processutil.ExecuteCommand(cmd, false); err != nil {
-		log.Printf("cutfile4video error during .m3u8 and ts file generation: %v", err)
 		return err
 	}
 
 	// 删除 index.ts 文件
 	if err := os.Remove(tsPath); err != nil {
-		log.Printf("cutfile4video error deleting index.ts: %v", err)
 	}
 
 	return nil
@@ -332,12 +307,14 @@ func (f *FileSrv) NewFoloder(ctx context.Context, uid string, filePid, fileName 
 		return nil, err
 	}
 	if tmp != nil && tmp.FileID != "" {
+		logger.Log("WARN", "用户请求创建文件已经存在")
 		return nil, errors.New("文件已经存在")
 	}
 	now := time.Now().Format("2006-01-02 15:04:05")
 	file := file.File{FileID: uuid.MustString(), UserID: uid, FolderType: 1, FileName: fileName, FilePid: filePid, CreateTime: now, LastUpdateTime: now, RecoveryTime: now, Status: define.FileStatusUsing, DelFlag: define.FileFlagInUse}
 	err = f.Repo.UploadFile(ctx, &file)
 	if err != nil {
+		logger.Log("ERROR", err.Error())
 		return nil, err
 	}
 	return &file, nil
@@ -366,6 +343,8 @@ func (f *FileSrv) findAllSubFolderFileIdList(ctx context.Context, fileIdList *[]
 // 删除文件
 func (f *FileSrv) DelFiles(ctx context.Context, uid string, fileId string) error {
 	fileIds := strings.Split(fileId, ",")
+
+	// 查询文件信息
 	query := schema.RequestFileListPage{
 		Path:    fileIds,
 		DelFlag: define.FileFlagInUse,
@@ -374,56 +353,53 @@ func (f *FileSrv) DelFiles(ctx context.Context, uid string, fileId string) error
 	// 查找目录
 	fileInfoList, _ := f.Repo.GetFileList(ctx, uid, &query, false)
 	if fileInfoList == nil || len(fileInfoList) == 0 {
-		return nil
+		logger.Log("WARN", contextx.FromUserID(ctx), "请求查询不存在文件")
+		return errors.New("请求错误")
 	}
 
 	delFileList := make([]string, 0)
-	//TODO fix
 
-	//文件删除 应该标志
+	// 查找二级下所有文件
 	for _, e := range fileInfoList {
-		go func() {
-			f.Timer.Add("file_"+e.FileID+e.UserID, time.Now().Add(time.Hour*24*10), func() {
-				//  记录数量
+		temp := make([]string, 0)
+		f.findAllSubFolderFileIdList(ctx, &temp, uid, e.FileID, define.FileFlagInUse)
+		if len(temp) > 0 {
 
-				if e.FileType == define.FileTypeFolder {
+			go func() {
+				timer.GetInstance().Add(fmt.Sprintf(define.RecycleDelTimerKey, contextx.FromUserID(ctx)+e.FileID), time.Now().Add(time.Hour*24*7),
+					func() {
+						req := schema.RequestFileListPage{
+							Path:    temp,
+							DelFlag: define.FileFlagSoftDeleted,
+						}
+						list, err := f.Repo.GetFileList(ctx, contextx.FromUserID(ctx), &req, false)
+						if err != nil {
+							logger.Log("WARN", contextx.FromUserID(ctx), err.Error())
+						}
 
-				} else {
-					count, err := f.Repo.CountFileByMd5(ctx, e.FileMd5)
-					if err != nil {
-						// 记录日志  /// --->>>
-						log.Default().Println("[error] ", err)
-						return
-					}
-					if count == 0 {
-						// 错误日志    md5数据有无
-						log.Default().Println("[error] ", "文件md5 不存在", e.FileMd5)
+						for _, v := range list {
+							c := cache.NewCacheReader(path.Dir(v.FilePath))
+							c.Delete()
+						}
+					})
+			}()
 
-					}
+			delFileList = append(delFileList, temp...)
 
-					// 如果当前文件
-					if count == 1 {
-						ossUtil.NewClient()
-					}
-				}
-
-				f.Repo.DelFiles(ctx, e.UserID, []string{e.FileID})
-			})
-		}()
-		f.findAllSubFolderFileIdList(ctx, &delFileList, uid, e.FileID, define.FileFlagInUse)
+		}
 	}
 
 	// 暂时移除下面的子目录
 	if len(delFileList) != 0 {
 		err := f.Repo.UpdateFileDelFlag(ctx, uid, delFileList, nil, define.FileFlagInUse, define.FileFlagSoftDeleted, time.Now().Format("2006-01-02 15:04:05"))
 		if err != nil {
-			log.Default().Printf("update file delFileList error:%v", err)
+			logger.Log("WARN", contextx.FromUserID(ctx), err.Error())
 			return err
 		}
 	}
 	err := f.Repo.UpdateFileDelFlag(ctx, uid, nil, fileIds, define.FileFlagInUse, define.FileFlagInRecycleBin, time.Now().Format("2006-01-02 15:04:05"))
 	if err != nil {
-		log.Default().Printf("update file delflag error:%v", err)
+		logger.Log("WARN", contextx.FromUserID(ctx), err.Error())
 		return err
 	}
 
@@ -435,7 +411,6 @@ func CreateCover4Video(path string, width int, dest string) error {
 	cmd := exec.Command("/usr/bin/ffmpeg", "-i", path, "-y", "-vframes", "1", "-loglevel", "quiet", "-vf", fmt.Sprintf("scale=%d:%d", width, width), dest)
 	cmd.Stderr = os.Stderr
 	if _, err := processutil.ExecuteCommand(cmd, false); err != nil {
-		log.Printf("create cover error: %v", err)
 		return err
 	}
 	return nil
@@ -547,7 +522,6 @@ func (f *FileSrv) FileRename(ctx context.Context, uid, fileID, filePid, fileName
 
 	file, err := f.Repo.GetFileInfo(ctx, fileID, uid)
 	if err != nil {
-		log.Printf("filerename error %v:", err)
 		return nil, err
 	}
 
@@ -560,7 +534,6 @@ func (f *FileSrv) FileRename(ctx context.Context, uid, fileID, filePid, fileName
 	}
 	tmp, err := f.Repo.CheckFileName(ctx, filePid, uid, fileName, fmt.Sprintln(file.FolderType))
 	if err != nil {
-		log.Printf("filerename CheckFileName error %v:", err)
 		return nil, err
 	}
 
@@ -573,7 +546,6 @@ func (f *FileSrv) FileRename(ctx context.Context, uid, fileID, filePid, fileName
 
 	err = f.Repo.UpdateFile(ctx, file)
 	if err != nil {
-		log.Printf("filerename UploadFile error %v:", err)
 		return nil, err
 	}
 	return file, nil
@@ -607,7 +579,7 @@ func (f *FileSrv) ChangeFileFolder(ctx context.Context, uid string, fileIds stri
 	item.FilePid = filePid
 	lists, err := f.Repo.GetFileList(ctx, uid, &item, false) // 找新文件夹下的子文件
 	if err != nil {
-		log.Println("ChangeFileFolder GetFileList error", err)
+
 		return errors.New("error") // TODO wait fix
 	}
 

@@ -15,6 +15,7 @@ import (
 	"onlineCLoud/internel/app/router"
 	"onlineCLoud/internel/app/schema"
 	"onlineCLoud/internel/app/service"
+	logger "onlineCLoud/pkg/log"
 	"onlineCLoud/pkg/timer"
 	"time"
 )
@@ -81,8 +82,7 @@ func BuildInjector() (*Injector, func(), error) {
 	}
 
 	RecycleSrv := service.RecycleSrv{
-		Repo:  &fileRepo,
-		Timer: timer,
+		Repo: &fileRepo,
 	}
 	recycleApi := api.RecycleApi{
 		RecycleSrv: &RecycleSrv,
@@ -147,6 +147,7 @@ func BuildInjector() (*Injector, func(), error) {
 		DownLoad:      &download,
 	}
 
+	// 对回收站定时删除
 	go func() {
 		list, _ := fileRepo.GetFileList(context.Background(), "*", &schema.RequestFileListPage{DelFlag: define.FileFlagInRecycleBin}, false)
 		for _, file := range list {
@@ -159,6 +160,7 @@ func BuildInjector() (*Injector, func(), error) {
 
 	}()
 
+	go InitTimer()
 	engine := InitGinEngine(routerRouter)
 
 	injector := &Injector{
@@ -166,11 +168,15 @@ func BuildInjector() (*Injector, func(), error) {
 		Auth:   auther,
 	}
 
+	// 初始化日志
+	logger.InitLogger()
+
 	return injector, func() {
 		cleanup()
 		cleanup2()
 		cleanup3()
 		timer.Close()
+		logger.Close()
 	}, nil
 
 }

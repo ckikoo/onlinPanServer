@@ -185,3 +185,20 @@ func (hdfs *HdfsClient) DeleteFile(path string) error {
 
 	return nil
 }
+func (hdfs *HdfsClient) GetFileInfo(path string) (os.FileInfo, error) {
+	info, err := hdfs.client.Stat(path)
+	if err != nil {
+		return info, err
+	}
+
+	return info, nil
+}
+
+func (hdfs *HdfsClient) ReadDir(path string) ([]os.FileInfo, error) {
+	files, err := hdfs.client.ReadDir(path)
+	if err != nil {
+		return nil, err
+	}
+
+	return files, nil
+}

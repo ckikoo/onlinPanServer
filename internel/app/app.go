@@ -33,26 +33,36 @@ func SetVersion(s string) Option {
 	}
 }
 
+// Init 初始化函数
+// ctx: 上下文，用于控制函数的生命周期。
+// opts: 一个或多个选项函数，用于配置初始化过程。
+// 返回值: 初始化完成后需要调用的清理函数和可能发生的错误。
 func Init(ctx context.Context, opts ...Option) (func(), error) {
-	var o options
+	var o options // 定义选项结构体变量用于存储配置。
+	// 遍历并应用所有提供的选项函数来配置初始化过程。
 	for _, opt := range opts {
 		opt(&o)
 	}
 
+	// 加载配置文件。
 	config.MustLoad(o.ConfigFile)
 
+	// 打印配置信息。
 	config.PrintWithJSON()
 
+	// 构建依赖注入器，并获取其清理函数。
 	injector, injectorCleanFunc, err := BuildInjector()
 	if err != nil {
-		return nil, err
+		return nil, err // 如果构建依赖注入器失败，则返回错误。
 	}
 
+	// 初始化HTTP服务器，并获取其清理函数。
 	httpServerCleanFunc := InitHttpServer(ctx, injector.Engine)
 
+	// 返回一个组合的清理函数，用于清理HTTP服务器和依赖注入器。
 	return func() {
-		httpServerCleanFunc()
-		injectorCleanFunc()
+		httpServerCleanFunc() // 清理HTTP服务器。
+		injectorCleanFunc()   // 清理依赖注入器。
 	}, nil
 }
 
@@ -63,9 +73,6 @@ func InitHttpServer(ctx context.Context, handler http.Handler) func() {
 	srv := &http.Server{
 		Addr:    addr,
 		Handler: handler,
-		// ReadTimeout: 10 * time.Second,
-		// WriteTimeout: 30 * time.Second,
-		// IdleTimeout: 30 * time.Second,
 	}
 
 	go func() {

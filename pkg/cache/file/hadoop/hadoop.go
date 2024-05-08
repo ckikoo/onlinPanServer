@@ -2,8 +2,10 @@ package hadoop
 
 import (
 	"io"
+	"io/fs"
 	"onlineCLoud/pkg/file"
 	hdfsUtil "onlineCLoud/pkg/util/hdfs"
+	"os"
 )
 
 // HadoopCache Hadoop 缓存
@@ -66,4 +68,31 @@ func (hc *HadoopCache) Delete(filepath string) error {
 	}
 
 	return client.DeleteFile(filepath)
+}
+func (hc *HadoopCache) GetFileInfo(filepath string) (fs.FileInfo, error) {
+	client, err := hdfsUtil.NewClient("172.20.0.2:9000")
+	if err != nil {
+		return nil, err
+	}
+
+	if filepath[0] != '/' {
+		filepath = "/" + filepath
+	}
+
+	return client.GetFileInfo(filepath)
+
+}
+
+func (hc *HadoopCache) ReadDir(filepath string) ([]os.FileInfo, error) {
+	client, err := hdfsUtil.NewClient("172.20.0.2:9000")
+	if err != nil {
+		return nil, err
+	}
+
+	if filepath[0] != '/' {
+		filepath = "/" + filepath
+	}
+
+	return client.ReadDir(filepath)
+
 }

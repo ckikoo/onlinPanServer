@@ -3,7 +3,6 @@ package user
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"onlineCLoud/internel/app/dao/redisx"
 	"onlineCLoud/internel/app/dao/util"
@@ -137,7 +136,6 @@ func (a *UserRepo) SetRedis(ctx context.Context, email string, in string) error 
 
 func (a *UserRepo) GetUseSpace(ctx context.Context, email string) map[string]interface{} {
 	space, _ := a.Rd.Get(ctx, "user:space:"+email)
-	fmt.Printf("space: %v\n", space)
 	var item UserSpace
 	if space != "" {
 		json.Unmarshal([]byte(space), &item)

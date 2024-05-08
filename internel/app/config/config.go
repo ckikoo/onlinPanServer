@@ -69,6 +69,14 @@ type Config struct {
 	MySQL       MySQL
 	GZIP        GZIP
 	File        File
+	Hadoop      Hadoop
+	LOGGER      LOGGER
+}
+type LOGGER struct {
+	DIR string
+}
+type Hadoop struct {
+	Host string
 }
 type Download struct {
 	Limit uint64

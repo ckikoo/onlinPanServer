@@ -2,7 +2,7 @@
 RunMode = "debug"
 AppName = "OnlinePan"
 # 启动时是否打印配置参数
-PrintConfig = false
+PrintConfig = true
 
 [HTTP]
 Host = "0.0.0.0"
@@ -125,4 +125,7 @@ ExcludedExtentions = [".png", ".gif", ".jpeg", ".jpg"]
 ExcludedPaths = []
 
 [HADOOP]
-HOST = "172.20.0.2:9000"
+Host = "172.20.0.2:9000"
+
+[LOGGER]
+DIR = "./log"

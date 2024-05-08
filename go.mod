@@ -47,21 +47,18 @@ require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/gin-contrib/cors v1.4.0
 	github.com/go-redis/redis v6.15.9+incompatible
-	github.com/go-redis/redis_rate v6.5.0+incompatible
 	github.com/go-sql-driver/mysql v1.7.1
 	github.com/jinzhu/copier v0.4.0
 	github.com/koding/multiconfig v0.0.0-20171124222453-69c27309b2d7
 	github.com/pelletier/go-toml v1.9.5
 	github.com/pkg/errors v0.9.1
 	github.com/tidwall/buntdb v1.3.0
-	github.com/unidoc/unipdf/v3 v3.57.0
-	golang.org/x/time v0.3.0
+	go.uber.org/zap v1.27.0
 	gorm.io/driver/mysql v1.5.1
 	gorm.io/gorm v1.25.1
 )
 
 require (
-	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/hashicorp/go-uuid v1.0.3 // indirect
 	github.com/jcmturner/aescts/v2 v2.0.0 // indirect
 	github.com/jcmturner/dnsutils/v2 v2.0.0 // indirect
@@ -69,14 +66,9 @@ require (
 	github.com/jcmturner/goidentity/v6 v6.0.1 // indirect
 	github.com/jcmturner/gokrb5/v8 v8.4.4 // indirect
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/stretchr/testify v1.9.0 // indirect
-	github.com/unidoc/pkcs7 v0.2.0 // indirect
-	github.com/unidoc/timestamp v0.0.0-20200412005513-91597fd3793a // indirect
-	github.com/unidoc/unitype v0.4.0 // indirect
-	golang.org/x/image v0.15.0 // indirect
-	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
+	go.uber.org/multierr v1.10.0 // indirect
+	golang.org/x/time v0.3.0 // indirect
 )
 
 require (
