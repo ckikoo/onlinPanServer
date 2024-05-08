@@ -70,8 +70,17 @@ type Config struct {
 	GZIP        GZIP
 	File        File
 	Hadoop      Hadoop
+	Oss         Oss
 	LOGGER      LOGGER
 }
+
+type Oss struct {
+	Host               string
+	OssAccessKeyID     string
+	OssAccessKeySecret string
+	Bucket             string
+}
+
 type LOGGER struct {
 	DIR string
 }

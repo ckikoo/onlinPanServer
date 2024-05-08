@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"onlineCLoud/internel/app/config"
 	"os"
 	"path"
 
@@ -16,11 +17,12 @@ type OssClient struct {
 }
 
 func NewClient() (*OssClient, error) {
-	client, err := oss.New("oss-cn-fuzhou.aliyuncs.com", "LTAI5t8ApTY8CGGRSkhazaSb", "gOo3v7a7H5W6CmmoAo3UxisBdwK5LK")
+	C := config.C.Oss
+	client, err := oss.New(C.Host, C.OssAccessKeyID, C.OssAccessKeySecret)
 	if err != nil {
 		return nil, err
 	}
-	bucket, err := client.Bucket("online-pan")
+	bucket, err := client.Bucket(C.Bucket)
 	if err != nil {
 		return nil, err
 	}

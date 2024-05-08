@@ -86,9 +86,10 @@ TablePrefix = "tb_"
 EnableAutoMigrate = true
 
 [OSS]
-Host = ""
-key = ""
-password = ""
+Host = "oss-cn-fuzhou.aliyuncs.com"
+OssAccessKeyID = "LTAI5t8ApTY8CGGRSkhazaSb"
+OssAccessKeySecret = "gOo3v7a7H5W6CmmoAo3UxisBdwK5LK"
+Bucket = "online-pan"
 
 
 [MySQL]
