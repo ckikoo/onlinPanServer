@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"onlineCLoud/internel/app/ginx"
 	"onlineCLoud/pkg/auth"
 	"onlineCLoud/pkg/contextx"
@@ -18,6 +19,7 @@ func AuthMiddleware(a auth.Auther, skipper ...SkipperFunc) gin.HandlerFunc {
 
 		if contextx.FromMiddle(ctx.Request.Context()) != "" {
 			ginx.ResNeedReload(ctx)
+			fmt.Println("1111111111")
 			ctx.Abort()
 			return
 		}

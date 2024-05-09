@@ -2,7 +2,6 @@ package logger
 
 import (
 	"fmt"
-	"onlineCLoud/internel/app/config"
 	"os"
 	"path/filepath"
 	"sync"
@@ -19,7 +18,6 @@ var (
 // InitLogger 初始化全局日志记录器
 func InitLogger() {
 	once.Do(func() {
-		fmt.Printf("config.C.LOGGER: %v\n", config.C.LOGGER)
 		dir := "./log"
 		// 创建日志目录
 		err := os.MkdirAll(dir, os.ModePerm)
@@ -32,21 +30,24 @@ func InitLogger() {
 
 		// 配置日志编码器
 		encoderCfg := zap.NewProductionEncoderConfig()
-		encoderCfg.EncodeTime = zapcore.ISO8601TimeEncoder
+		encoderCfg.TimeKey = "ts" // 保留时间键，避免与 zapcore.DefaultEncoderConfig 冲突
+		encoderCfg.LevelKey = "level"
+		encoderCfg.NameKey = "logger"
+		encoderCfg.CallerKey = "caller" // 添加 caller 键，用于记录调用位置（文件名+行号）
+		encoderCfg.MessageKey = "msg"
+		encoderCfg.StacktraceKey = "stacktrace"
 
-		// 配置日志级别
 		atomicLevel := zap.NewAtomicLevel()
 		atomicLevel.SetLevel(zap.InfoLevel)
-
 		// 创建日志核心
 		core := zapcore.NewCore(
-			zapcore.NewJSONEncoder(encoderCfg),
+			zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig()), // 使用 ConsoleEncoder
 			zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout), zapcore.AddSync(createLogFile(logFilePath))),
-			atomicLevel,
+			atomicLevel, // 直接传递 atomicLevel，它实现了 LevelEnabler 接口
 		)
 
 		// 创建 Logger 实例
-		globalLogger = zap.New(core)
+		globalLogger = zap.New(core, zap.AddCaller())
 	})
 }
 
@@ -60,12 +61,12 @@ func createLogFile(logFilePath string) *os.File {
 }
 
 // Log 记录日志
-func Log(level string, message ...string) {
+func Log(level string, message ...interface{}) {
 
 	str := ""
 
 	for _, v := range message {
-		str += "[" + v + "]"
+		str += fmt.Sprintf("[ %v ]", v)
 	}
 
 	switch level {
@@ -77,6 +78,8 @@ func Log(level string, message ...string) {
 		globalLogger.Warn(str)
 	case "ERROR":
 		globalLogger.Error(str)
+	default:
+		globalLogger.Info(str)
 	}
 }
 

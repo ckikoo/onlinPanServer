@@ -74,13 +74,12 @@ func (f *FileApi) NewFoloder(c *gin.Context) {
 	filePid := c.PostForm("filePid")
 	fileName := c.PostForm("fileName")
 
-	info, err := f.FileSrv.NewFoloder(c, contextx.FromUserID(ctx), filePid, fileName)
+	info, err := f.FileSrv.NewFoloder(c, contextx.FromUserID(ctx), filePid, fileName, false)
 	if err != nil {
 		ginx.ResFailWithMessage(c, "创建失败")
 		return
 	}
 	ginx.ResOkWithData(c, info)
-
 }
 
 func (f *FileApi) DelFiles(c *gin.Context) {
@@ -92,7 +91,7 @@ func (f *FileApi) DelFiles(c *gin.Context) {
 		return
 	}
 
-	err := f.FileSrv.DelFiles(c, contextx.FromUserID(ctx), input)
+	err := f.FileSrv.DelFiles(c, contextx.FromUserID(ctx), input, false)
 	if err != nil {
 		ginx.ResFailWithMessage(c, "删除失败")
 		return
@@ -184,7 +183,10 @@ func (f *FileApi) LoadAllFolder(c *gin.Context) {
 	if filePid == "" {
 		ginx.ResFail(c)
 	}
-	files, err := f.FileSrv.LoadAllFolder(ctx, contextx.FromUserID(ctx), filePid, currentFileIds)
+
+	fmt.Printf("filePid: %v\n", filePid)
+
+	files, err := f.FileSrv.LoadAllFolder(ctx, contextx.FromUserID(ctx), filePid, currentFileIds, false)
 	if err != nil {
 		ginx.ResFail(c)
 		return
@@ -203,7 +205,7 @@ func (f *FileApi) ChangeFileFolder(c *gin.Context) {
 		ginx.ResFail(c)
 	}
 	fmt.Println(filePid)
-	err := f.FileSrv.ChangeFileFolder(ctx, contextx.FromUserID(ctx), fileIds, filePid)
+	err := f.FileSrv.ChangeFileFolder(ctx, contextx.FromUserID(ctx), fileIds, filePid, false)
 	if err != nil {
 		ginx.ResFailWithMessage(c, err.Error())
 		return

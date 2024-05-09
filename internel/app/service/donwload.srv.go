@@ -20,10 +20,11 @@ func (srv *DownLoadSrv) CreateDownLoad(ctx context.Context, userId string, fileI
 		CreateTime: time.Now().Unix(),
 	}
 
-	f, err := srv.Repo.CreateRecord(ctx, data)
+	f, err := srv.Repo.CreateRecord(ctx, &data)
 	if err != nil {
 		return err
 	}
+	fmt.Printf("data: %v\n", data)
 	if f {
 		download.CreateRecordUseRedis(ctx, data, path)
 		return nil
@@ -52,6 +53,10 @@ func (srv *DownLoadSrv) FindDownloadByCode(ctx context.Context, code string) (st
 	}
 
 	return data, nil
+}
+
+func (srv *DownLoadSrv) Delete(ctx context.Context, code string) {
+	srv.Repo.Delete(ctx, code)
 }
 
 func (srv *DownLoadSrv) GetALlDownLoad(ctx context.Context, code string) ([]download.Download, error) {

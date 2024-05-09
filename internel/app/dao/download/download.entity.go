@@ -9,10 +9,10 @@ import (
 )
 
 type Download struct {
-	UserId     string `gorm:"index"` // 用户
-	FileId     string `gorm:"index"` // 文件id
-	Code       string `gorm:"index"` //下载码
-	CreateTime int64  // 创建时间
+	UserId     string `gorm:"column:user_id;index"`
+	FileId     string `gorm:"column:file_id;index"`
+	Code       string `gorm:"column:code;index"`
+	CreateTime int64  `gorm:"column:create_time"`
 }
 
 func getDownloadB(ctx context.Context, defDB *gorm.DB) *gorm.DB {

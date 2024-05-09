@@ -45,7 +45,6 @@ func (f *RecycleApi) GetFileList(c *gin.Context) {
 
 func (f *RecycleApi) DelFiles(c *gin.Context) {
 	ctx := c.Request.Context()
-
 	input := c.PostForm("fileIds")
 	if input == "" {
 		ginx.ResFailWithMessage(c, "请选择文件夹")

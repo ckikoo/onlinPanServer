@@ -10,6 +10,7 @@ import (
 	"onlineCLoud/internel/app/config"
 	"onlineCLoud/internel/app/dao/file"
 	"onlineCLoud/internel/app/dao/redisx"
+	"onlineCLoud/internel/app/dao/share"
 	"onlineCLoud/internel/app/dao/user"
 	"onlineCLoud/internel/app/define"
 	"onlineCLoud/internel/app/schema"
@@ -25,7 +26,6 @@ import (
 	util "onlineCLoud/pkg/util/uuid"
 	"os"
 	"os/exec"
-	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -299,7 +299,7 @@ func (f *FileSrv) CheckFileName(ctx context.Context, filePid string, userID stri
 	return file, nil
 }
 
-func (f *FileSrv) NewFoloder(ctx context.Context, uid string, filePid, fileName string) (*file.File, error) {
+func (f *FileSrv) NewFoloder(ctx context.Context, uid string, filePid, fileName string, secure bool) (*file.File, error) {
 
 	tmp, err := f.CheckFileName(ctx, filePid, uid, fileName, "1")
 	if err != nil {
@@ -310,7 +310,18 @@ func (f *FileSrv) NewFoloder(ctx context.Context, uid string, filePid, fileName 
 		return nil, errors.New("文件已经存在")
 	}
 	now := time.Now().Format("2006-01-02 15:04:05")
-	file := file.File{FileID: uuid.MustString(), UserID: uid, FolderType: 1, FileName: fileName, FilePid: filePid, CreateTime: now, LastUpdateTime: now, RecoveryTime: now, Status: define.FileStatusUsing, DelFlag: define.FileFlagInUse}
+	file := file.File{
+		FileID: uuid.MustString(),
+		UserID: uid, FolderType: 1,
+		FileName:       fileName,
+		FilePid:        filePid,
+		CreateTime:     now,
+		LastUpdateTime: now,
+		RecoveryTime:   "",
+		Status:         define.FileStatusUsing,
+		DelFlag:        define.FileFlagInUse,
+		Secure:         secure,
+	}
 	err = f.Repo.UploadFile(ctx, &file)
 	if err != nil {
 		logger.Log("ERROR", err.Error())
@@ -319,13 +330,14 @@ func (f *FileSrv) NewFoloder(ctx context.Context, uid string, filePid, fileName 
 	return &file, nil
 }
 
-func (f *FileSrv) findAllSubFolderFileIdList(ctx context.Context, fileIdList *[]string, userID, fileID string, delflag int8) {
+func (f *FileSrv) findAllSubFolderFileIdList(ctx context.Context, fileIdList *[]string, userID, fileID string, delflag int8, secure bool) {
 	*fileIdList = append(*fileIdList, fileID)
 
 	query := schema.RequestFileListPage{
 		FilePid:    fileID,
 		DelFlag:    delflag,
 		FolderType: 1,
+		Secure:     secure,
 	}
 
 	fields, err := f.Repo.GetFileList(ctx, userID, &query, false)
@@ -335,18 +347,19 @@ func (f *FileSrv) findAllSubFolderFileIdList(ctx context.Context, fileIdList *[]
 	}
 
 	for _, v := range fields {
-		f.findAllSubFolderFileIdList(ctx, fileIdList, userID, v.FileID, delflag)
+		f.findAllSubFolderFileIdList(ctx, fileIdList, userID, v.FileID, delflag, secure)
 	}
 }
 
 // 删除文件
-func (f *FileSrv) DelFiles(ctx context.Context, uid string, fileId string) error {
+func (f *FileSrv) DelFiles(ctx context.Context, uid string, fileId string, secure bool) error {
 	fileIds := strings.Split(fileId, ",")
 
 	// 查询文件信息
 	query := schema.RequestFileListPage{
 		Path:    fileIds,
 		DelFlag: define.FileFlagInUse,
+		Secure:  secure,
 	}
 
 	// 查找目录
@@ -361,27 +374,18 @@ func (f *FileSrv) DelFiles(ctx context.Context, uid string, fileId string) error
 	// 查找二级下所有文件
 	for _, e := range fileInfoList {
 		temp := make([]string, 0)
-		f.findAllSubFolderFileIdList(ctx, &temp, uid, e.FileID, define.FileFlagInUse)
+		f.findAllSubFolderFileIdList(ctx, &temp, uid, e.FileID, define.FileFlagInUse, secure)
 		if len(temp) > 0 {
 
-			go func() {
-				timer.GetInstance().Add(fmt.Sprintf(define.RecycleDelTimerKey, contextx.FromUserID(ctx)+e.FileID), time.Now().Add(time.Hour*24*7),
-					func() {
-						req := schema.RequestFileListPage{
-							Path:    temp,
-							DelFlag: define.FileFlagSoftDeleted,
-						}
-						list, err := f.Repo.GetFileList(ctx, contextx.FromUserID(ctx), &req, false)
-						if err != nil {
-							logger.Log("WARN", contextx.FromUserID(ctx), err.Error())
-						}
+			for _, fid := range temp {
+				go func() {
+					timer.GetInstance().Add(fmt.Sprintf(define.RecycleDelTimerKey, contextx.FromUserID(ctx)+fid), time.Now().Add(time.Hour*24*7), func() {
+						srv := RecycleSrv{Repo: f.Repo}
+						srv.DelFiles(ctx, contextx.FromUserID(ctx), fid)
 
-						for _, v := range list {
-							c := cache.NewCacheReader(path.Dir(v.FilePath))
-							c.Delete()
-						}
 					})
-			}()
+				}()
+			}
 
 			delFileList = append(delFileList, temp...)
 
@@ -550,18 +554,20 @@ func (f *FileSrv) FileRename(ctx context.Context, uid, fileID, filePid, fileName
 	return file, nil
 }
 
-func (f *FileSrv) LoadAllFolder(ctx context.Context, uid string, filePid string, fileIDs string) ([]file.File, error) {
+func (f *FileSrv) LoadAllFolder(ctx context.Context, uid string, filePid string, fileIDs string, secure bool) ([]file.File, error) {
 	var item schema.RequestFileListPage
 	curs := strings.Split(fileIDs, ",")
 	item.ExInclude = curs
 	item.FolderType = 1
 	item.DelFlag = define.FileFlagInUse
 	item.FilePid = filePid
+	item.Secure = secure
+	fmt.Printf("item: %v\n", item)
 	res, err := f.Repo.GetFileList(ctx, uid, &item, false)
 	return res, err
 }
 
-func (f *FileSrv) ChangeFileFolder(ctx context.Context, uid string, fileIds string, filePid string) error {
+func (f *FileSrv) ChangeFileFolder(ctx context.Context, uid string, fileIds string, filePid string, secure bool) error {
 
 	if strings.Contains(fileIds, filePid) {
 		return errors.New("")
@@ -569,7 +575,7 @@ func (f *FileSrv) ChangeFileFolder(ctx context.Context, uid string, fileIds stri
 	if filePid != "0" { //判定父文件夹是否存在
 		file, err := f.Repo.GetFileInfo(ctx, filePid, uid)
 		if err != nil || file == nil || file.Status != define.FileStatusUsing {
-			return errors.New("error") // TODO wait fix
+			return errors.New("error")
 		}
 	}
 
@@ -578,7 +584,6 @@ func (f *FileSrv) ChangeFileFolder(ctx context.Context, uid string, fileIds stri
 	item.FilePid = filePid
 	lists, err := f.Repo.GetFileList(ctx, uid, &item, false) // 找新文件夹下的子文件
 	if err != nil {
-
 		return errors.New("error") // TODO wait fix
 	}
 
@@ -590,6 +595,7 @@ func (f *FileSrv) ChangeFileFolder(ctx context.Context, uid string, fileIds stri
 	item = schema.RequestFileListPage{}
 	curs := strings.Split(fileIds, ",")
 	item.Path = curs
+	item.Secure = secure
 	lists, _ = f.Repo.GetFileList(ctx, uid, &item, false) // 找要被移动的文件
 
 	for _, ele := range lists {
@@ -730,7 +736,38 @@ func (srv *FileSrv) CancelUpload(ctx context.Context, uid string, fileid string)
 // 文件加入密码箱
 func (srv *FileSrv) UpdateFileSecure(ctx context.Context, uid string, fileid string, status bool) error {
 	fileids := strings.Split(fileid, ",")
-	return srv.Repo.UpdateFileSecure(ctx, uid, fileids, status)
+
+	query := schema.RequestFileListPage{
+		Path:    fileids,
+		DelFlag: define.FileFlagInUse,
+		Secure:  true,
+	}
+
+	fileInfoList, err := srv.Repo.GetFileList(ctx, uid, &query, false)
+	if err != nil {
+		logger.Log("WARN", err.Error())
+		return err
+	}
+
+	if fileInfoList == nil || len(fileInfoList) == 0 {
+		logger.Log("INFO", "没有找到文件")
+		return nil
+	}
+
+	FileIDList := make([]string, 0)
+	for _, fileinfo := range fileInfoList {
+		if fileinfo.FolderType == 1 {
+			srv.findAllSubFolderFileIdList(ctx, &FileIDList, uid, fileinfo.FileID, define.FileFlagSoftDeleted, status)
+		}
+	}
+
+	FileIDList = append(FileIDList, fileids...)
+
+	if err := srv.Repo.UpdateFileSecure(ctx, uid, fileids, status); err != nil {
+		return err
+	}
+
+	return srv.ChangeFileToRoot(ctx, uid, fileInfoList)
 }
 
 func (srv *FileSrv) GetFileListTotalSize(ctx context.Context, uid string, fileid []string) (uint64, error) {
@@ -789,4 +826,104 @@ func (f *FileSrv) findAllSubAllFileIdAndMd5List(ctx context.Context, fileids *[]
 		}
 		f.findAllSubAllFileIdAndMd5List(ctx, fileids, md5Set, userID, v.FileID, delflag)
 	}
+}
+
+// 加密文件列表接口
+// 找出所有md5
+func (f *FileSrv) DeleteFiles(ctx context.Context, uid string, ids string) error {
+	id := strings.Split(ids, ",")
+
+	query := schema.RequestFileListPage{
+		Path:   id,
+		Secure: true,
+	}
+
+	fileInfoList, _ := f.Repo.GetFileList(ctx, uid, &query, false)
+	if fileInfoList == nil || len(fileInfoList) == 0 {
+		return nil
+	}
+
+	delFileList := make([]string, 0)
+	Md5Set := mapset.NewSet()
+	for _, e := range fileInfoList {
+		f.findAllSubAllFileIdAndMd5List(ctx, &delFileList, &Md5Set, uid, e.FileID, define.FileFlagInUse)
+	}
+
+	delFileList = append(id, delFileList...)
+
+	shareSrv := ShareSrv{Repo: &share.ShareRepo{DB: f.Repo.Db}}
+	list, err := shareSrv.LoadShareList(ctx, uid, 0, -1)
+	if err != nil {
+		return err
+	}
+
+	delFileMap := make(map[string]bool)
+	for _, delFileID := range delFileList {
+		delFileMap[delFileID] = true
+	}
+
+	if shareIds, ok := list.List.([]share.Share); ok {
+		connIds := make([]string, 0)
+		for _, shareItem := range shareIds {
+			if delFileMap[shareItem.FileId] {
+				connIds = append(connIds, shareItem.ShareId)
+			}
+		}
+		shareSrv.CancelShare(ctx, uid, connIds)
+	}
+
+	if err := f.Repo.DelFiles(ctx, uid, delFileList); err != nil {
+		return err
+	}
+
+	// 删除物理文件
+	for item := range Md5Set.Iter() {
+		md5 := item.(string)
+		count, err := f.Repo.CountFileByMd5(ctx, md5)
+		if err != nil {
+			logger.Log("ERROR", err.Error())
+			continue
+		}
+		if count == 0 {
+			go func() {
+				ca := cache.NewCacheReader("upload/" + md5 + "/")
+				ca.Delete()
+			}()
+		}
+	}
+
+	return nil
+}
+
+// 改变文件到根目录下
+func (f *FileSrv) ChangeFileToRoot(ctx context.Context, uid string, fileInfoList []file.File) error {
+	rootFileMap := make(map[string]file.File, 0)
+
+	query := schema.RequestFileListPage{
+		FilePid: "0",
+		DelFlag: define.FileFlagInUse,
+	}
+
+	fileinfolist, err := f.Repo.GetFileList(ctx, uid, &query, false)
+	if err != nil {
+		return err
+	}
+
+	for _, v := range fileinfolist {
+		rootFileMap[v.FileName] = v
+	}
+
+	//移动根目录
+	for _, file := range fileInfoList {
+		if _, ok := rootFileMap[file.FileName]; ok {
+			file.FileName = fileUtil.Rename(file.FileName)
+		}
+		file.FilePid = "0"
+		file.LastUpdateTime = time.Now().Format("2006-01-02 15:04:05")
+		file.RecoveryTime = ""
+		file.DelFlag = define.FileFlagInUse
+		f.Repo.UpdateFile(ctx, &file)
+	}
+
+	return nil
 }

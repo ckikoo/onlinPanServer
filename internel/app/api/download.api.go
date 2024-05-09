@@ -23,7 +23,6 @@ type DownLoadApi struct {
 }
 
 func (d DownLoadApi) Download(c *gin.Context) {
-
 	ctx := c.Request.Context()
 	code := c.Param("code")
 
@@ -31,7 +30,6 @@ func (d DownLoadApi) Download(c *gin.Context) {
 		ginx.ResFail(c)
 		return
 	}
-
 	path, err := d.Srv.FindDownloadByCode(ctx, code)
 	if err != nil {
 		ginx.ResFailWithMessage(c, err.Error())
@@ -53,10 +51,11 @@ func (d DownLoadApi) Download(c *gin.Context) {
 	}
 
 	timer.GetInstance().Add("local_cache_delete"+path, time.Now().Add(time.Hour*24), func() {
+		d.Srv.Delete(ctx, code)
 		os.RemoveAll(path)
 	})
 	timer.GetInstance().Add("hdfs_cache_delete"+path, time.Now().Add(time.Hour*24*7), func() {
-		client, err := hdfsUtil.NewClient("172.20.0.2:9000")
+		client, err := hdfsUtil.NewClient(config.C.Hadoop.Host)
 		if err != nil {
 			panic(err)
 		}

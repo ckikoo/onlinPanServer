@@ -1,5 +1,5 @@
 # 运行模式(debug:调试,test:测试,release:正式)
-RunMode = "test"
+RunMode = "debug"
 AppName = "OnlinePan"
 # 启动时是否打印配置参数
 PrintConfig = false

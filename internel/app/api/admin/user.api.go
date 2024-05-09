@@ -23,7 +23,13 @@ func (a *AdminApi) UpdateUserStatus(c *gin.Context) {
 		ginx.ResFailWithMessage(c, err.Error())
 		return
 	}
-	a.AdminSrv.UpdateUserStatus(ctx, userId, int(st))
+	err = a.AdminSrv.UpdateUserStatus(ctx, userId, int(st))
+	if err != nil {
+		ginx.ResFailWithMessage(c, err.Error())
+		return
+	}
+
+	ginx.ResOk(c)
 }
 
 func (a *AdminApi) LoadUserList(c *gin.Context) {

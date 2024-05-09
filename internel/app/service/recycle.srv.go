@@ -93,11 +93,12 @@ func (f *RecycleSrv) DelFiles(ctx context.Context, uid string, fileId string) er
 		Path:    fileIds,
 		DelFlag: define.FileFlagInRecycleBin,
 	}
-
+	logger.Log("DEBUG", fileIds)
 	fileInfoList, _ := f.Repo.GetFileList(ctx, uid, &query, false)
 	if fileInfoList == nil || len(fileInfoList) == 0 {
 		return nil
 	}
+
 	delFileList := make([]string, 0)
 	Md5Set := mapset.NewSet()
 	for _, e := range fileInfoList {
@@ -124,20 +125,30 @@ func (f *RecycleSrv) DelFiles(ctx context.Context, uid string, fileId string) er
 				connIds = append(connIds, shareItem.ShareId)
 			}
 		}
-
 		shareSrv.CancelShare(ctx, uid, connIds)
 	}
 
 	if err := f.Repo.DelFiles(ctx, uid, delFileList); err != nil {
 		return err
 	}
-
+	logger.Log("DEBUG", "111111")
 	f.delfileToUpdateSpace(ctx, uid)
 
 	// 删除物理文件
 	for item := range Md5Set.Iter() {
 		md5 := item.(string)
-		cache.NewCacheReader("upload/" + md5 + "/")
+		count, err := f.Repo.CountFileByMd5(ctx, md5)
+		logger.Log("DEBUG", "count", count, "md5", md5)
+		if err != nil {
+			logger.Log("ERROR", err.Error())
+			continue
+		}
+		if count == 0 {
+			go func() {
+				ca := cache.NewCacheReader("upload/" + md5 + "/")
+				ca.Delete()
+			}()
+		}
 	}
 
 	return nil

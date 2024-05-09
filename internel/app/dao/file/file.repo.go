@@ -244,5 +244,5 @@ func (f *FileRepo) UpdateFileSecure(ctx context.Context, UserID string, fileIds 
 	if fileIds != nil && len(fileIds) > 0 {
 		db = db.Where("file_id in (?)", fileIds)
 	}
-	return db.Where("user_id=?", UserID).Updates(map[string]interface{}{"secure": status}).Error
+	return db.Where("user_id=?", UserID).Updates(map[string]interface{}{"secure": status, "file_pid": 0}).Error
 }

@@ -2,4 +2,4 @@ docker start mysql
 
 docker start hadoop1
 
-docker exec -it start-all.sh&&jps
+docker exec -it hadoop1 start-all.sh&jps

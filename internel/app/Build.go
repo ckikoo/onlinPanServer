@@ -5,12 +5,14 @@ import (
 	"onlineCLoud/internel/app/api"
 	"onlineCLoud/internel/app/api/admin"
 	"onlineCLoud/internel/app/dao/download"
+	"onlineCLoud/internel/app/dao/enc"
 	"onlineCLoud/internel/app/dao/file"
 	workOrder "onlineCLoud/internel/app/dao/gongdan"
 	"onlineCLoud/internel/app/dao/mailx"
 	"onlineCLoud/internel/app/dao/redisx"
 	"onlineCLoud/internel/app/dao/share"
 	"onlineCLoud/internel/app/dao/user"
+	"onlineCLoud/internel/app/dao/vip"
 	"onlineCLoud/internel/app/define"
 	"onlineCLoud/internel/app/router"
 	"onlineCLoud/internel/app/schema"
@@ -73,6 +75,9 @@ func BuildInjector() (*Injector, func(), error) {
 		DownLoadSrv: &downloadSrv,
 	}
 	EncSrv := service.EncSrv{
+		Repo: &enc.EncRepo{
+			Db: db,
+		},
 		UserRepo: &UserRepo,
 	}
 	EncApi := api.EncAPI{
@@ -126,6 +131,17 @@ func BuildInjector() (*Injector, func(), error) {
 		},
 	}
 
+	vipSrv := service.VipService{
+		Repo: &vip.VipRepo{
+			DB: db,
+		},
+	}
+
+	adminVip := admin.VipApi{Srv: &vipSrv}
+	vip := api.VipApi{
+		Srv: &vipSrv,
+	}
+
 	download := api.DownLoadApi{
 		Srv:     &downloadSrv,
 		FileSrv: &FileSrv,
@@ -144,6 +160,8 @@ func BuildInjector() (*Injector, func(), error) {
 		WorkOrder:     &work,
 		AdminOrder:    &AdminOrder,
 		DownLoad:      &download,
+		AdminVip:      &adminVip,
+		Vip:           &vip,
 	}
 
 	// 对回收站定时删除

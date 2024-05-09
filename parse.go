@@ -42,7 +42,7 @@ func printFile(path string) error {
 	if !strings.HasSuffix(path, ".go") {
 		return nil
 	}
-	key := "fmt.Printf"
+	key := "帐号失效"
 	file, err := os.Open(path)
 	if err != nil {
 		return err

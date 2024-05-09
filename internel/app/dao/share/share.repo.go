@@ -54,12 +54,10 @@ func (f *ShareRepo) Insert(ctx context.Context, share Share) error {
 
 func (f *ShareRepo) CancelShare(ctx context.Context, uid string, fids []string) error {
 	db := GetShareDB(ctx, f.DB)
-	db.Begin()
 	// 使用原始 SQL 表达式执行删除操作
 	sql := "DELETE FROM tb_share WHERE user_id = ? AND FIND_IN_SET(share_id, ?)"
 	res := db.Exec(sql, uid, strings.Join(fids, ","))
 	if res.Error != nil || int(res.RowsAffected) != len(fids) {
-		db.Rollback()
 		return res.Error
 	}
 

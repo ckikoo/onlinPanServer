@@ -44,7 +44,7 @@ func New(c *Config) (*gorm.DB, error) {
 	}
 
 	gconfig := &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Silent),
+		Logger: logger.Default.LogMode(logger.Info),
 		NamingStrategy: schema.NamingStrategy{
 			TablePrefix:   c.TablePrefix,
 			SingularTable: true,

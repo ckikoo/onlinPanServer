@@ -8,6 +8,7 @@ import (
 	workOrder "onlineCLoud/internel/app/dao/gongdan"
 	"onlineCLoud/internel/app/dao/share"
 	"onlineCLoud/internel/app/dao/user"
+	"onlineCLoud/internel/app/dao/vip"
 
 	"strings"
 
@@ -26,6 +27,7 @@ func AutoMigrate(db *gorm.DB) error {
 		new(workOrder.WorkOrder),
 		new(download.Download),
 		new(enc.Enc),
+		new(vip.Vip),
 	)
 
 	return err

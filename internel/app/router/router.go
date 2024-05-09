@@ -28,6 +28,8 @@ type Router struct {
 	WorkOrder     *api.WorkOrderApi
 	AdminOrder    *admin.AdminOrderApi
 	DownLoad      *api.DownLoadApi
+	Vip           *api.VipApi
+	AdminVip      *admin.VipApi
 }
 
 func (a *Router) Regitser(app *gin.Engine) error {
@@ -69,6 +71,7 @@ func (a *Router) RegisterApI(app *gin.Engine) {
 	g.POST("/admin/saveSysSettings", a.AdminApi.SaveSysSettings)
 
 	g.POST("/admin/getUserInfo", a.UserApi.GetInfo)
+	g.POST("/admin/updateUserStatus", a.AdminApi.UpdateUserStatus)
 
 	g.GET("/checkCode", api.GenerateCaptcha)
 	g.POST("/sendEmailCode", api.SendEmail)
@@ -125,11 +128,13 @@ func (a *Router) RegisterApI(app *gin.Engine) {
 	g.POST("/enc/initEncPassword", a.EncAPI.InitPassword)
 	g.POST("/enc/checkPassword", a.EncAPI.CheckPassword)
 	g.POST("/enc/checkEnc", a.EncAPI.CheckEnc)
-	g.POST("/enc/loadencList", a.EncAPI.LoadencList)
+	g.POST("/enc/loadDataList", a.EncAPI.LoadencList)
 	g.POST("/enc/delFile", a.EncAPI.DelFile)
 	g.POST("/enc/recoverFile", a.EncAPI.RecoverFile)
-
-	// issue
+	g.POST("/enc/newFoloder", a.EncAPI.NewFoloder)
+	g.POST("/enc/loadAllFolder", a.EncAPI.LoadAllFolder)
+	g.POST("/enc/changeFileFolder", a.EncAPI.ChangeFileFolder)
+	// issuea
 	g.POST("/workOrder/create", a.WorkOrder.Create)
 	g.POST("/workOrder/get", a.WorkOrder.LoadWorkList)
 	g.POST("/workOrder/delete", a.WorkOrder.Delete)
@@ -137,4 +142,12 @@ func (a *Router) RegisterApI(app *gin.Engine) {
 	g.POST("/workOrder/update", a.WorkOrder.UpdateWorkOrder)
 	g.POST("/admin/workOrder/update", a.AdminOrder.Update)
 	g.POST("/admin/workOrder/delete", a.AdminOrder.Delete)
+
+	// 工单列表
+	g.POST("/admin/vip/getVipList", a.AdminVip.GetVipList)
+	g.POST("/admin/vip/add", a.AdminVip.Add)
+	g.POST("/admin/vip/updateVipStatus", a.AdminVip.UpdateStatus)
+	g.POST("/admin/vip/delete", a.AdminVip.Delete)
+	g.POST("/admin/vip/update", a.AdminVip.Update)
+
 }
