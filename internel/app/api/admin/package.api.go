@@ -1,7 +1,7 @@
 package admin
 
 import (
-	"onlineCLoud/internel/app/dao/vip"
+	Package "onlineCLoud/internel/app/dao/package"
 	"onlineCLoud/internel/app/ginx"
 	"onlineCLoud/internel/app/service"
 	"strconv"
@@ -9,14 +9,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type VipApi struct {
-	Srv *service.VipService
+type PackageApi struct {
+	Srv *service.PageService
 }
 
-func (api *VipApi) GetVipList(c *gin.Context) {
+func (api *PackageApi) GetPackageList(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	res, err := api.Srv.GetVipList(ctx)
+	res, err := api.Srv.GetPackageList(ctx, false)
 	if err != nil {
 
 		ginx.ResFailWithMessage(c, err.Error())
@@ -25,14 +25,15 @@ func (api *VipApi) GetVipList(c *gin.Context) {
 
 	ginx.ResOkWithData(c, res)
 }
-func (api *VipApi) UpdateStatus(c *gin.Context) {
+func (api *PackageApi) UpdateStatus(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	id, err := strconv.Atoi(c.PostForm("id"))
+	id, err := strconv.Atoi(c.PostForm("ID"))
 	if err != nil {
 		ginx.ResFailWithMessage(c, err.Error())
 		return
 	}
+
 	show, err := strconv.ParseBool(c.PostForm("show"))
 	if err != nil {
 		ginx.ResFailWithMessage(c, err.Error())
@@ -48,17 +49,17 @@ func (api *VipApi) UpdateStatus(c *gin.Context) {
 	ginx.ResOk(c)
 }
 
-func (api *VipApi) Update(c *gin.Context) {
+func (api *PackageApi) Update(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	var body vip.Vip
+	var body Package.Package
 
 	if err := ginx.ParseForm(c, &body); err != nil {
 		ginx.ResFail(c)
 		return
 	}
 
-	err := api.Srv.Update(ctx, body.ID, body)
+	err := api.Srv.Update(ctx, int(body.Model.ID), body)
 	if err != nil {
 		ginx.ResFailWithMessage(c, err.Error())
 		return
@@ -67,24 +68,24 @@ func (api *VipApi) Update(c *gin.Context) {
 	ginx.ResOk(c)
 }
 
-func (api *VipApi) Add(c *gin.Context) {
+func (api *PackageApi) Add(c *gin.Context) {
 
 	ctx := c.Request.Context()
-	var vip vip.Vip
-	if err := ginx.ParseForm(c, &vip); err != nil {
+	var Package Package.Package
+	if err := ginx.ParseForm(c, &Package); err != nil {
 		ginx.ResFail(c)
 		return
 	}
 	c1, _ := strconv.ParseBool(c.PostForm("show"))
-	vip.Show = c1
-	if err := api.Srv.AddVip(ctx, vip); err != nil {
+	Package.Show = c1
+	if err := api.Srv.AddPackage(ctx, Package); err != nil {
 		ginx.ResFail(c)
 		return
 	}
 
 	ginx.ResOk(c)
 }
-func (api *VipApi) Delete(c *gin.Context) {
+func (api *PackageApi) Delete(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	id, err := strconv.Atoi(c.PostForm("id"))
@@ -93,7 +94,7 @@ func (api *VipApi) Delete(c *gin.Context) {
 		return
 	}
 
-	err = api.Srv.DelVips(ctx, id)
+	err = api.Srv.DelPackages(ctx, id)
 	if err != nil {
 		ginx.ResFail(c)
 		return

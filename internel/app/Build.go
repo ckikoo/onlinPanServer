@@ -4,11 +4,13 @@ import (
 	"context"
 	"onlineCLoud/internel/app/api"
 	"onlineCLoud/internel/app/api/admin"
+	"onlineCLoud/internel/app/dao/dingdan"
 	"onlineCLoud/internel/app/dao/download"
 	"onlineCLoud/internel/app/dao/enc"
 	"onlineCLoud/internel/app/dao/file"
 	workOrder "onlineCLoud/internel/app/dao/gongdan"
 	"onlineCLoud/internel/app/dao/mailx"
+	Package "onlineCLoud/internel/app/dao/package"
 	"onlineCLoud/internel/app/dao/redisx"
 	"onlineCLoud/internel/app/dao/share"
 	"onlineCLoud/internel/app/dao/user"
@@ -131,15 +133,18 @@ func BuildInjector() (*Injector, func(), error) {
 		},
 	}
 
-	vipSrv := service.VipService{
-		Repo: &vip.VipRepo{
+	pageSrv := service.PageService{
+		Repo: &Package.PackageRepo{
+			DB: db,
+		},
+		DingDanRepo: &dingdan.DingdanRepo{
 			DB: db,
 		},
 	}
 
-	adminVip := admin.VipApi{Srv: &vipSrv}
-	vip := api.VipApi{
-		Srv: &vipSrv,
+	adminPackage := admin.PackageApi{Srv: &pageSrv}
+	pa := api.PageApi{
+		Srv: &pageSrv,
 	}
 
 	download := api.DownLoadApi{
@@ -160,8 +165,26 @@ func BuildInjector() (*Injector, func(), error) {
 		WorkOrder:     &work,
 		AdminOrder:    &AdminOrder,
 		DownLoad:      &download,
-		AdminVip:      &adminVip,
-		Vip:           &vip,
+		AdminPackage:  &adminPackage,
+		PageApi:       &pa,
+		Dingdan: &api.DingdanApi{
+			Srv: &service.DingdanService{
+				PageRepo: pageSrv.Repo,
+				DingdanRepo: &dingdan.DingdanRepo{
+					DB: db,
+				},
+				VipRepo: &vip.VipRepo{
+					VipDB: db,
+				},
+			},
+		},
+		Vip: &api.VipAPI{
+			VipSrv: &service.VipSrv{
+				VipRepo: &vip.VipRepo{
+					VipDB: db,
+				},
+			},
+		},
 	}
 
 	// 对回收站定时删除

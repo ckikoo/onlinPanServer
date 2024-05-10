@@ -41,10 +41,6 @@ Height = 30
 
 [Redis]
 Addr = "ljcctv.bf:23561"
-# 哨兵地址
-# Addr = ["192.168.49.141:26379", "192.18.49.142:26379", "192.168.49.143:26379"]
-# 主节点名称
-# MasterName = "mymaster"
 # 密码
 Password = "U2FsdGVkX1sc"
 

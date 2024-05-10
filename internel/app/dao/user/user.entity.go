@@ -20,6 +20,7 @@ type User struct {
 	Email    string `json:"email" form:"email" gorm:"column:email;type:varchar(30);uniqueIndex:key_email"`
 	Avatar   string `json:"avatar" form:"avatar" gorm:"column:avatar;type:varchar(100)"`
 	Admin    bool   `json:"admin" form:"admin" gorm:"column:admin"`
+	VipId    int    `json:"vipId" form:"vipId" gorm:"column:vipId"`
 	UserSpace
 	CreateTime   time.Time `json:"joinTime"`
 	LastJoinTime time.Time `json:"lastLoginTime"`

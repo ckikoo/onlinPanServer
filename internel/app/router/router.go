@@ -28,8 +28,10 @@ type Router struct {
 	WorkOrder     *api.WorkOrderApi
 	AdminOrder    *admin.AdminOrderApi
 	DownLoad      *api.DownLoadApi
-	Vip           *api.VipApi
-	AdminVip      *admin.VipApi
+	PageApi       *api.PageApi
+	AdminPackage  *admin.PackageApi
+	Dingdan       *api.DingdanApi
+	Vip           *api.VipAPI
 }
 
 func (a *Router) Regitser(app *gin.Engine) error {
@@ -144,10 +146,13 @@ func (a *Router) RegisterApI(app *gin.Engine) {
 	g.POST("/admin/workOrder/delete", a.AdminOrder.Delete)
 
 	// 工单列表
-	g.POST("/admin/vip/getVipList", a.AdminVip.GetVipList)
-	g.POST("/admin/vip/add", a.AdminVip.Add)
-	g.POST("/admin/vip/updateVipStatus", a.AdminVip.UpdateStatus)
-	g.POST("/admin/vip/delete", a.AdminVip.Delete)
-	g.POST("/admin/vip/update", a.AdminVip.Update)
+	g.POST("/admin/package/getPackageList", a.AdminPackage.GetPackageList)
+	g.POST("/admin/package/add", a.AdminPackage.Add)
+	g.POST("/admin/package/updatePackageStatus", a.AdminPackage.UpdateStatus)
+	g.POST("/admin/package/delete", a.AdminPackage.Delete)
+	g.POST("/admin/package/update", a.AdminPackage.Update)
+	g.POST("/package/loadPackageList", a.PageApi.GetPageList)
+	g.POST("/package/buy", a.Dingdan.Buy)
 
+	g.POST("/vipInfo", a.Vip.GetInfo)
 }
