@@ -32,6 +32,7 @@ type Router struct {
 	AdminPackage  *admin.PackageApi
 	Dingdan       *api.DingdanApi
 	Vip           *api.VipAPI
+	AdminVip      *admin.VipAPI
 }
 
 func (a *Router) Regitser(app *gin.Engine) error {
@@ -155,4 +156,7 @@ func (a *Router) RegisterApI(app *gin.Engine) {
 	g.POST("/package/buy", a.Dingdan.Buy)
 
 	g.POST("/vipInfo", a.Vip.GetInfo)
+	g.POST("/admin/vip/loadVipList", a.AdminVip.GetVipList)
+	g.POST("/admin/vip/updateVipTime", a.AdminVip.UpdateTime)
+	g.POST("/admin/dingdan/load", a.Dingdan.GetDingdanList)
 }

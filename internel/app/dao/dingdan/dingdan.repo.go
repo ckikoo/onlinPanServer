@@ -3,7 +3,7 @@ package dingdan
 import (
 	"context"
 	"errors"
-	"onlineCLoud/internel/app/schema"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -12,19 +12,33 @@ type DingdanRepo struct {
 	DB *gorm.DB
 }
 
-func (f *DingdanRepo) GetDingdanList(ctx context.Context, pageNo, pageSize int, page bool, uid string) ([]Dingdan, error) {
+type dingdan struct {
+	ID        uint `gorm:"primarykey"`
+	CreatedAt time.Time
+	PackName  string  `gorm:"column:packageName" json:"packageName"`
+	NickName  string  `gorm:"column:nick_name" json:"nick_name"`
+	UserId    string  `gorm:"column:user_id" json:"user_id"`
+	PackageId int     `gorm:"column:package_id" json:"package_id"`
+	Price     float32 `gorm:"column:price" json:"price" form:"price"`
+}
+
+func (f *DingdanRepo) GetDingdanList(ctx context.Context, pageNo, pageSize int, page bool, uid string) ([]dingdan, error) {
 	db := GetDingdanDB(ctx, f.DB)
-	temp := make([]Dingdan, 0)
+	temp := make([]dingdan, 0)
 
-	params := schema.PageParams{
-		PageNo:   pageNo,
-		PageSize: pageSize,
-	}
-
-	res := db.Offset((params.PageNo - 1) * params.PageSize).Limit(params.PageSize).Order("created_at desc").Find(&temp)
+	res := db.
+		Select("tb_dingdan.id, tb_dingdan.created_at, tb_package.pageName as packageName, tb_dingdan.user_id as user_id, tb_dingdan.package_id as PackageId, tb_package.price, tb_user.nick_name").
+		Joins("left join tb_package on tb_dingdan.package_id = tb_package.id").
+		Joins("left join tb_user on tb_dingdan.user_id = tb_user.user_id").
+		Where("tb_user.nick_name LIKE ?", "%"+uid+"%").
+		Offset((pageNo - 1) * pageSize).
+		Limit(pageSize).
+		Order("tb_dingdan.created_at desc").
+		Scan(&temp)
 	if res.Error != nil {
 		return nil, res.Error
 	}
+
 	return temp, nil
 }
 

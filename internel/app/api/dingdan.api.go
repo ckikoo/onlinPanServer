@@ -36,7 +36,7 @@ func (api *DingdanApi) GetDingdanList(c *gin.Context) {
 		return
 	}
 
-	res, err := api.Srv.GetDingdanList(ctx, no_, size_, true, contextx.FromUserID(ctx))
+	res, err := api.Srv.GetDingdanList(ctx, no_, size_, true, "")
 	if err != nil {
 		ginx.ResFailWithMessage(c, err.Error())
 		return

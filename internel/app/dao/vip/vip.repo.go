@@ -3,7 +3,6 @@ package vip
 import (
 	"context"
 	"errors"
-	"log"
 	"onlineCLoud/internel/app/config"
 	"onlineCLoud/internel/app/dao/redisx"
 	"onlineCLoud/internel/app/dao/util"
@@ -17,28 +16,45 @@ import (
 type VipRepo struct {
 	VipDB *gorm.DB
 }
+type info struct {
+	UserId      string    `gorm:"column:user_id" json:"user_id" form:"user_id"` // 页面名称
+	VipId       int       `gorm:"column:vip_id" json:"vip_id" form:"vip_id"`    // 页面名称
+	NickName    string    `json:"nickName" form:"nickName" gorm:"column:nick_name;type:varchar(20);index:key_nick_name"`
+	Avatar      string    `json:"avatar" form:"avatar" gorm:"column:avatar;type:varchar(100)"`
+	PageName    string    `gorm:"column:pageName" json:"pageName" form:"pageName"` // 页面名称
+	ActiveFrom  time.Time `json:"activeFrom"`
+	ActiveUntil time.Time `json:"activeUntil"`
+}
 
-func (a *VipRepo) LoadVipInfoList(ctx context.Context, uid string) ([]Vip, error) {
+func (a *VipRepo) LoadVipInfoList(ctx context.Context, pageno, pageSize int, uid string) ([]info, error) {
+	var list []info
 
-	list := make([]Vip, 0)
-	res := GetVipDb(ctx, a.VipDB).Where(&Vip{UserID: uid}).Find(&list)
-	if res.Error != nil {
-		return nil, res.Error
+	db := GetVipDb(ctx, a.VipDB).
+		Select("tb_vip.id as vip_id,tb_user.nick_name, tb_user.avatar, tb_package.pageName, tb_vip.user_id, tb_vip.active_from, tb_vip.active_until").
+		Joins("JOIN tb_user ON tb_vip.user_id = tb_user.user_id").
+		Joins("JOIN tb_package ON tb_vip.vip_package_id = tb_package.id").
+		Limit(pageSize).Offset((pageno - 1) * pageSize).
+		Find(&list)
+	if db.Error != nil {
+		return nil, db.Error
 	}
 	return list, nil
 }
 
-func (a *VipRepo) GetVipListTotal(ctx context.Context, uid string) (int64, error) {
-
-	db := GetVipDb(ctx, a.VipDB)
+func (a *VipRepo) GetVipListTotal(ctx context.Context, pageno, pageSize int, uid string) (int64, error) {
 
 	var total int64
-	err := db.Where(&Vip{UserID: uid}).Count(&total).Error
-	if err != nil {
-		log.Println(err)
+	db := GetVipDb(ctx, a.VipDB).
+		Select("tb_user.nick_name").
+		Joins("JOIN tb_user ON tb_vip.user_id = tb_user.user_id").
+		Joins("JOIN tb_package ON tb_vip.vip_package_id = tb_package.id").
+		Limit(pageSize).Offset((pageno - 1) * pageSize).
+		Count(&total)
+	if db.Error != nil {
+
 		return 0, nil
 	}
-	return total, err
+	return total, nil
 
 }
 
@@ -135,4 +151,18 @@ type vipInfo struct {
 	PageName    string    `gorm:"column:pageName"`
 	SpeedLimit  int       `gorm:"column:speedLimit"`
 	SpaceSize   int       `gorm:"column:spaceSize"`
+}
+
+func (a *VipRepo) UpdateTime(ctx context.Context, id, endTime int, uid string) error {
+	db := GetVipDb(ctx, a.VipDB)
+	e := time.Unix(int64(endTime), 0)
+	res := db.Where(&Vip{UserID: uid, Model: gorm.Model{ID: uint(id)}}).Updates(&Vip{ActiveUntil: e})
+	if res.Error != nil {
+		if res.Error != gorm.ErrRecordNotFound {
+			return res.Error
+		}
+
+		return errors.New("记录不存在")
+	}
+	return nil
 }

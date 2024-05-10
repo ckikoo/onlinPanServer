@@ -185,6 +185,13 @@ func BuildInjector() (*Injector, func(), error) {
 				},
 			},
 		},
+		AdminVip: &admin.VipAPI{
+			VipSrv: &service.VipSrv{
+				VipRepo: &vip.VipRepo{
+					VipDB: db,
+				},
+			},
+		},
 	}
 
 	// 对回收站定时删除
