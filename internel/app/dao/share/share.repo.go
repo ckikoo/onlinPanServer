@@ -14,18 +14,29 @@ import (
 type ShareRepo struct {
 	DB *gorm.DB
 }
+type share struct {
+	ShareId    string `json:"shareId" form:"shareId" gorm:"column:share_id;type:varchar(36) ;primaryKey"`
+	FileId     string `json:"fileId" form:"fileId" gorm:"column:file_id;type:varchar(36) ;"`
+	UserId     string `json:"userId" form:"userId" gorm:"column:user_id;type:varchar(36) ;"`
+	ExpireTime string `json:"expireTime"`
+	ShareTime  string `json:"shareTime"`
+	Code       string `json:"code" form:"code" gorm:"column:code;type:varchar(5) ;"`
+	ValidType  int8   `json:"validType" form:"validType" gorm:"column:valid_type;type:tinyint(1);"`
+	ShowCount  uint32 `json:"showCount" form:"showCount" gorm:"column:show_count;type:int(11);"`
+	FileName   string `json:"file_name"   form:"file_name" gorm:"column:file_name"` //文件名
+}
 
-func (f *ShareRepo) GetShareList(ctx context.Context, uid string, schema *schema.RequestFileListPage, page bool) ([]Share, error) {
+func (f *ShareRepo) GetShareList(ctx context.Context, uid string, schema *schema.RequestFileListPage, page bool) ([]share, error) {
 	db := GetShareDB(ctx, f.DB)
 
 	if schema.OrderBy != "" {
 		db.Order(schema.OrderBy)
 	}
-	sql := "SELECT tb_file.file_name, tb_share.* FROM tb_share LEFT JOIN tb_file ON tb_file.file_id = tb_share.file_id WHERE tb_share.user_id = ?"
+	sql := "SELECT tb_file.*, tb_share.* FROM tb_share LEFT JOIN tb_file ON tb_file.file_id = tb_share.file_id WHERE tb_share.user_id = ?"
 
 	db = db.Raw(sql, uid)
 
-	var temp []Share
+	var temp []share
 	err := util.WrapPageQuery(ctx, db, &schema.PageParams, &temp, page)
 
 	return temp, err

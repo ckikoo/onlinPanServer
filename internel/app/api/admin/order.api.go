@@ -18,9 +18,11 @@ func (a *AdminOrderApi) LoadWorkList(c *gin.Context) {
 	pageNo := c.Request.PostFormValue("pageNo")
 	pageSize := c.Request.PostFormValue("pageSize")
 	status := c.DefaultPostForm("status", "*")
-	if pageNo == "" && pageSize == "" {
+	if pageNo == "" {
 		pageNo = "1"
-		pageSize = "20"
+	}
+	if pageSize == "" {
+		pageSize = "10"
 	}
 
 	PageNo, err := strconv.ParseInt(pageNo, 10, 64)

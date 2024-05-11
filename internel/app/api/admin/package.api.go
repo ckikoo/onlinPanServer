@@ -88,7 +88,7 @@ func (api *PackageApi) Add(c *gin.Context) {
 func (api *PackageApi) Delete(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	id, err := strconv.Atoi(c.PostForm("id"))
+	id, err := strconv.Atoi(c.PostForm("ID"))
 	if err != nil {
 		ginx.ResFail(c)
 		return
