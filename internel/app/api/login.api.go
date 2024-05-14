@@ -28,11 +28,12 @@ func (a *LoginAPI) Login(c *gin.Context) {
 		return
 	}
 
-	checkCode := c.PostForm("checkCode")
-	if !service.CaptchaVerify(c, "0", checkCode) {
-		ginx.ResFailWithMessage(c, "验证码错误")
-		return
-	}
+	// checkCode := c.PostForm("checkCode")
+	// fmt.Printf("checkCode: %v\n", checkCode)
+	// if !service.CaptchaVerify(c, "0", checkCode) {
+	// 	ginx.ResFailWithMessage(c, "验证码错误")
+	// 	return
+	// }
 	user_id, err := a.LoginSrv.Login(ctx, item.Email, item.Password, false)
 
 	if err != nil {

@@ -42,12 +42,6 @@ func (api *EncAPI) AddFile(c *gin.Context) {
 		return
 	}
 
-	err = api.EncSrv.EnFilePass(ctx, contextx.FromUserID(ctx), fileIds)
-	if err != nil {
-		ginx.ResFailWithMessage(c, err.Error())
-		return
-	}
-
 	ginx.ResOk(c)
 }
 

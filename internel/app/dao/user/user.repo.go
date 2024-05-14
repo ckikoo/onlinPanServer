@@ -162,9 +162,9 @@ func (a *UserRepo) GetUserSpaceById(ctx context.Context, id string) UserSpace {
 	return item.UserSpace
 }
 
-func (a *UserRepo) UpdateSpace(ctx context.Context, email string, add uint64, update ...bool) error {
-	a.Rd.Delete(ctx, "user:space:"+email)
-	db := GetUserDB(ctx, a.DB).Where("email = ?", email)
+func (a *UserRepo) UpdateSpace(ctx context.Context, uid string, add uint64, update ...bool) error {
+	a.Rd.Delete(ctx, "user:space:"+uid)
+	db := GetUserDB(ctx, a.DB).Where(&User{UserID: uid})
 	if len(update) == 0 {
 		err := db.UpdateColumn("use_space", gorm.Expr("use_space + ?", add)).Error
 		if err != nil {
@@ -176,7 +176,7 @@ func (a *UserRepo) UpdateSpace(ctx context.Context, email string, add uint64, up
 			return err
 		}
 	}
-	a.Rd.Delete(ctx, "user:space:"+email)
+	a.Rd.Delete(ctx, "user:space:"+uid)
 	return nil
 }
 

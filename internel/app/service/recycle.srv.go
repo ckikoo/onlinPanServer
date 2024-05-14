@@ -87,13 +87,13 @@ func (f *RecycleSrv) findAllSubAllFileMd5AndIdList(ctx context.Context, fileIdLi
 		f.findAllSubAllFileIdList(ctx, fileIdList, userID, v.FileID, delflag)
 	}
 }
+
 func (f *RecycleSrv) DelFiles(ctx context.Context, uid string, fileId string) error {
 	fileIds := strings.Split(fileId, ",")
 	query := schema.RequestFileListPage{
 		Path:    fileIds,
 		DelFlag: define.FileFlagInRecycleBin,
 	}
-	logger.Log("DEBUG", fileIds)
 	fileInfoList, _ := f.Repo.GetFileList(ctx, uid, &query, false)
 	if fileInfoList == nil || len(fileInfoList) == 0 {
 		return nil
@@ -131,14 +131,12 @@ func (f *RecycleSrv) DelFiles(ctx context.Context, uid string, fileId string) er
 	if err := f.Repo.DelFiles(ctx, uid, delFileList); err != nil {
 		return err
 	}
-	logger.Log("DEBUG", "111111")
 	f.delfileToUpdateSpace(ctx, uid)
 
 	// 删除物理文件
 	for item := range Md5Set.Iter() {
 		md5 := item.(string)
 		count, err := f.Repo.CountFileByMd5(ctx, md5)
-		logger.Log("DEBUG", "count", count, "md5", md5)
 		if err != nil {
 			logger.Log("ERROR", err.Error())
 			continue
@@ -164,7 +162,7 @@ func (f *RecycleSrv) delfileToUpdateSpace(ctx context.Context, userid string) {
 		logger.Log("WARN", err.Error())
 		return
 	}
-	urv.UserRepo.UpdateSpace(ctx, contextx.FromUserEmail(ctx), total, true)
+	urv.UserRepo.UpdateSpace(ctx, userid, total, true)
 }
 
 // 回复文件

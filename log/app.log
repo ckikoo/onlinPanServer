@@ -19,3 +19,6 @@
 2024-05-11T20:01:51.304+0800	INFO	log/log.go:76	[ 没有找到文件 ]
 2024-05-11T20:24:05.099+0800	INFO	log/log.go:76	[ 没有找到文件 ]
 2024-05-11T20:24:46.381+0800	INFO	log/log.go:76	[ 没有找到文件 ]
+2024-05-12T12:01:57.530+0800	ERROR	log/log.go:81	[ failed to read directory ][ err ][ open ./upload: no such file or directory ]
+2024-05-12T12:38:25.399+0800	INFO	log/log.go:77	[ 没有找到文件 ]
+2024-05-12T13:52:17.403+0800	INFO	log/log.go:77	[ 没有找到文件 ]

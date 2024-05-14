@@ -50,7 +50,6 @@ func (f *DingdanService) Buy(ctx context.Context, uid string, id int) error {
 	if err != nil {
 		return err
 	}
-
 	if pinfo.Show == false {
 		return errors.New("该套餐已下架")
 	}
