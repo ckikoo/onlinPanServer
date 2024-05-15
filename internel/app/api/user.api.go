@@ -85,7 +85,7 @@ func (a *UserAPI) UpdateUserAvatar(c *gin.Context) {
 }
 func (a *UserAPI) GetUserSpace(c *gin.Context) {
 	ctx := c.Request.Context()
-
+	fmt.Println("1111111111111")
 	item := a.UserSrv.GetUserSpace(ctx, contextx.FromUserEmail(ctx))
 	ginx.ResOkWithData(c, item)
 

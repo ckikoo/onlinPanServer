@@ -8,6 +8,7 @@ import (
 	"onlineCLoud/internel/app/ginx"
 	"onlineCLoud/internel/app/service"
 	"onlineCLoud/pkg/cache"
+	"onlineCLoud/pkg/contextx"
 	"onlineCLoud/pkg/file"
 	"onlineCLoud/pkg/timer"
 	hdfsUtil "onlineCLoud/pkg/util/hdfs"
@@ -30,19 +31,19 @@ func (d DownLoadApi) Download(c *gin.Context) {
 		ginx.ResFail(c)
 		return
 	}
+
+	fmt.Printf("code: %v\n", code)
 	path, err := d.Srv.FindDownloadByCode(ctx, code)
 	if err != nil {
 		ginx.ResFailWithMessage(c, err.Error())
 		return
 	}
-	fmt.Printf("path: %v\n", path)
 	cr := cache.NewCacheReader(path)
 	reader, err := cr.Read()
 	if err != nil {
 		c.String(http.StatusNotFound, err.Error())
 		return
 	}
-	fmt.Printf("reader: %v\n", reader)
 	defer reader.Close()
 
 	info, err := os.Stat(path)
@@ -63,10 +64,12 @@ func (d DownLoadApi) Download(c *gin.Context) {
 		client.DeleteFile("/" + path)
 	})
 
-	limit := config.C.Download.Limit
+	limit, _ := d.Srv.GetDownLoadSpeed(ctx, contextx.FromUserID(ctx))
 	if limit <= 100 {
 		limit = 100
 	}
+
+	fmt.Printf("limit: %v\n", limit)
 
 	// 限制每次读取的字节数为 100 KB
 	limitedReader := &RateLimitedReader{
@@ -74,12 +77,10 @@ func (d DownLoadApi) Download(c *gin.Context) {
 		Limit: int64(limit) * 1024,
 	}
 	c.Header("x-cookie", "1")
-	c.Header("Content-Length", fmt.Sprintf("%d", info.Size()))
-	fmt.Printf("c.Writer.Header(): %+v\n", c.Writer.Header())
+
 	c.Writer.Header().Set("Content-Type", "application/octet-stream")
 	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", info.Name()))
 	c.Header("Accept-Ranges", "bytes")
-	c.Header("Content-Encoding", "")
 	c.Header("Etag", info.ModTime().String())
 	http.ServeContent(c.Writer, c.Request, info.Name(), info.ModTime(), limitedReader)
 }

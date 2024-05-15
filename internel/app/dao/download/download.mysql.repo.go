@@ -3,6 +3,7 @@ package download
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -26,12 +27,14 @@ func (repo *DownloadRepo) CreateRecord(ctx context.Context, data *Download) (boo
 
 func (repo *DownloadRepo) FindRecordByCode(ctx context.Context, code string) (string, error) {
 	db := getDownloadB(ctx, repo.Db)
+	startTime := time.Now().Add(-24 * time.Hour).Unix()
+	endTime := time.Now().Unix()
 
 	var resultMap map[string]interface{}
 	if err := db.Table("tb_download").
 		Select("tb_file.file_path as path").
 		Joins("JOIN tb_file ON tb_file.file_id = tb_download.file_id AND tb_file.user_id = tb_download.user_id").
-		Where("tb_download.code = ?", code).
+		Where("tb_download.create_time between ? and ? and tb_download.code = ?", startTime, endTime, code).
 		Scan(&resultMap).Error; err != nil {
 		return "", err
 	}

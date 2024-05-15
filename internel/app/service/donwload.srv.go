@@ -5,6 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"onlineCLoud/internel/app/dao/download"
+	"onlineCLoud/internel/app/dao/redisx"
+	"onlineCLoud/internel/app/dao/user"
+	logger "onlineCLoud/pkg/log"
 	"time"
 )
 
@@ -67,4 +70,22 @@ func (srv *DownLoadSrv) GetALlDownLoad(ctx context.Context, code string) ([]down
 	}
 
 	return data, nil
+}
+
+func (srv *DownLoadSrv) GetDownLoadSpeed(ctx context.Context, id string) (uint64, error) {
+	fmt.Printf("id: %v\n", id)
+	if len(id) == 0 {
+		return 100, nil
+	}
+	userRepo := user.UserRepo{
+		Rd: redisx.NewClient(),
+		DB: srv.Repo.Db,
+	}
+
+	limit, err := userRepo.GetUserSpeed(ctx, id)
+	if err != nil {
+		logger.Log("ERROR", err)
+	}
+
+	return limit, nil
 }

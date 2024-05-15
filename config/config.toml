@@ -115,7 +115,7 @@ MaxAge = 7200
 
 [GZIP]
 # 是否启用
-Enable = true
+Enable = false
 # 排除的文件扩展名
 ExcludedExtentions = [".png", ".gif", ".jpeg", ".jpg"]
 # 排除的请求路径

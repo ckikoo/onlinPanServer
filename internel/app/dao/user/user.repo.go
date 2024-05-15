@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"onlineCLoud/internel/app/config"
 	"onlineCLoud/internel/app/dao/redisx"
 	"onlineCLoud/internel/app/dao/util"
 	"onlineCLoud/internel/app/schema"
@@ -137,6 +138,7 @@ func (a *UserRepo) GetUseSpace(ctx context.Context, email string) map[string]int
 	space, err := a.Rd.Get(ctx, "user:space:"+email)
 	var item UserSpace
 	if err == nil {
+		fmt.Printf("space: %v\n", space)
 		if err := json.Unmarshal([]byte(space), &item); err == nil {
 			return item.ToMap()
 		}
@@ -168,12 +170,19 @@ func (a *UserRepo) GetUseSpace(ctx context.Context, email string) map[string]int
 		return item.ToMap()
 	}
 
+	if totalSpace <= 10000 {
+		totalSpace *= 1024 * 1024
+	}
+
 	// Set the values and cache them
 	item.TotalSpace = uint64(totalSpace)
 	item.UseSpace = uint64(useSpace)
 	str, _ := json.Marshal(item)
-	a.Rd.Set(ctx, "user:space:"+email, str, 24*time.Hour)
-
+	err = a.Rd.Set(ctx, "user:space:"+email, str, 24*time.Hour)
+	if err != nil {
+		fmt.Println("？", err)
+	}
+	fmt.Printf("err: %v\n", err)
 	return item.ToMap()
 }
 
@@ -206,6 +215,24 @@ func (a *UserRepo) GetUserSpaceById(ctx context.Context, id string) UserSpace {
 	item.UseSpace = uint64(useSpace)
 
 	return item
+}
+
+func (a *UserRepo) GetUserSpeed(ctx context.Context, id string) (uint64, error) {
+
+	var totalSpace int64
+	res := a.DB.Table("tb_vip v").
+		Select(fmt.Sprintf("COALESCE(p.speedLimit, %v) AS space_size", config.C.Download.Limit)).
+		Joins("JOIN tb_package p ON v.vip_package_id = p.id").
+		Where("? BETWEEN v.active_from AND v.active_until AND v.user_id = ?", time.Now(), id).
+		Order("p.speedLimit DESC").
+		Limit(1).
+		Scan(&totalSpace)
+	if res.Error != nil {
+		log.Printf("Error or no data for total space: %v", res.Error)
+		return 100, res.Error
+	}
+
+	return uint64(totalSpace), nil
 }
 
 func (a *UserRepo) UpdateSpace(ctx context.Context, uid string, add uint64, update ...bool) error {
