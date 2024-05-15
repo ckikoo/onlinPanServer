@@ -3,12 +3,12 @@ package user
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"onlineCLoud/internel/app/dao/redisx"
 	"onlineCLoud/internel/app/dao/util"
 	"onlineCLoud/internel/app/schema"
 	"onlineCLoud/pkg/errors"
-	jsonutil "onlineCLoud/pkg/util/json"
 	"time"
 
 	"gorm.io/gorm"
@@ -133,33 +133,79 @@ func (a *UserRepo) SetRedis(ctx context.Context, email string, in string) error 
 	return a.Rd.Set(ctx, email, in, time.Hour*(24))
 
 }
-
 func (a *UserRepo) GetUseSpace(ctx context.Context, email string) map[string]interface{} {
-	space, _ := a.Rd.Get(ctx, "user:space:"+email)
+	space, err := a.Rd.Get(ctx, "user:space:"+email)
 	var item UserSpace
-	if space != "" {
-		json.Unmarshal([]byte(space), &item)
+	if err == nil {
+		if err := json.Unmarshal([]byte(space), &item); err == nil {
+			return item.ToMap()
+		}
+		log.Printf("Failed to unmarshal: %v", err)
+	}
+
+	var useSpace int64
+	res := a.DB.Table("tb_file").Select("SUM(file_size) as space_used").
+		Joins("JOIN tb_user ON tb_user.user_id = tb_file.user_id").
+		Where("tb_user.email = ?", email).Scan(&useSpace)
+	if res.Error != nil {
+		log.Printf("Error querying use space: %v", res.Error)
 		return item.ToMap()
 	}
-	err := GetUserDB(ctx, a.DB).Select("use_space ", "total_space").Where("email = ?", email).First(&item).Error
-	if err != nil {
+	fmt.Printf("useSpace: %v\n", useSpace)
+
+	// Query for total space with COALESCE
+	var totalSpace int64
+	res = a.DB.Table("tb_user u").
+		Select("COALESCE(p.spaceSize, u.total_space) AS space_size").
+		Joins("JOIN tb_vip v ON u.user_id = v.user_id").
+		Joins("JOIN tb_package p ON v.vip_package_id = p.id").
+		Where("? BETWEEN v.active_from AND v.active_until AND u.email = ?", time.Now(), email).
+		Order("COALESCE(p.spaceSize, u.total_space) DESC").
+		Limit(1).
+		Scan(&totalSpace)
+	if res.Error != nil || res.RowsAffected == 0 {
+		log.Printf("Error or no data for total space: %v", res.Error)
 		return item.ToMap()
 	}
 
-	str := jsonutil.MarshalToString(item)
-	a.Rd.Set(ctx, "user:space:"+email, str, time.Hour*(24))
+	// Set the values and cache them
+	item.TotalSpace = uint64(totalSpace)
+	item.UseSpace = uint64(useSpace)
+	str, _ := json.Marshal(item)
+	a.Rd.Set(ctx, "user:space:"+email, str, 24*time.Hour)
+
 	return item.ToMap()
 }
 
 func (a *UserRepo) GetUserSpaceById(ctx context.Context, id string) UserSpace {
-
-	var item User
-
-	err := GetUserDB(ctx, a.DB).Select("use_space ", "total_space").Where(&User{UserID: id}).First(&item).Error
-	if err != nil {
-		return UserSpace{}
+	var item UserSpace
+	var useSpace int64
+	res := a.DB.Table("tb_file").Select("SUM(file_size) as space_used").
+		Joins("JOIN tb_user ON tb_user.user_id = tb_file.user_id").
+		Where("tb_file.user_id = ?", id).Scan(&useSpace)
+	if res.Error != nil {
+		log.Printf("Error querying use space: %v", res.Error)
+		return item
 	}
-	return item.UserSpace
+
+	var totalSpace int64
+	res = a.DB.Table("tb_user u").
+		Select("COALESCE(p.spaceSize, u.total_space) AS space_size").
+		Joins("JOIN tb_vip v ON u.user_id = v.user_id").
+		Joins("JOIN tb_package p ON v.vip_package_id = p.id").
+		Where("? BETWEEN v.active_from AND v.active_until AND u.user_id = ?", time.Now(), id).
+		Order("COALESCE(p.spaceSize, u.total_space) DESC").
+		Limit(1).
+		Scan(&totalSpace)
+	if res.Error != nil || res.RowsAffected == 0 {
+		log.Printf("Error or no data for total space: %v", res.Error)
+		return item
+	}
+
+	item.TotalSpace = uint64(totalSpace)
+	item.UseSpace = uint64(useSpace)
+
+	return item
 }
 
 func (a *UserRepo) UpdateSpace(ctx context.Context, uid string, add uint64, update ...bool) error {
