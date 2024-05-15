@@ -451,6 +451,7 @@ func (f *FileSrv) GetFile(ctx context.Context, fid string, uid string) ([]byte, 
 	if nil == file {
 		return make([]byte, 0), nil
 	}
+	fmt.Printf("file: %v\n", file)
 
 	if flag {
 		fileNameNoSuffix := fmt.Sprintf("%v/%v/%v", "upload", file.FileMd5, tmp)
@@ -482,7 +483,8 @@ func (f *FileSrv) GetFile(ctx context.Context, fid string, uid string) ([]byte, 
 			return b, nil
 
 		} else {
-			filePath := fmt.Sprintf("%v/%v/%v", "upload", file.FileMd5, file.FileName)
+
+			filePath := file.FilePath
 			reader, err := cache.NewCacheReader(filePath).Read()
 			if err != nil {
 				return make([]byte, 0), err
