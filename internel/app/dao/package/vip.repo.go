@@ -114,9 +114,10 @@ func (f *PackageRepo) FindById(ctx context.Context, id int) (*Package, error) {
 	db := GETPackageDB(ctx, f.DB)
 	var temp Package
 	res := db.Where("id = ?", id).First(&temp)
-	if res.Error != nil {
+	if res.Error != nil && gorm.ErrRecordNotFound != res.Error {
 		return nil, res.Error
 	}
+
 	if res.RowsAffected == 0 {
 		return nil, errors.New("not found")
 	}

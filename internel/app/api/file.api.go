@@ -48,6 +48,11 @@ func (f *FileApi) UploadFile(c *gin.Context) {
 		return
 	}
 
+	if item.Chunks == 0 || len(item.FileMd5) == 0 || item.FilePid == "" || len(item.FileName) == 0 {
+		ginx.ResFailWithMessage(c, "参数错误")
+		return
+	}
+
 	op, err := f.FileSrv.UploadFile(c, contextx.FromUserID(ctx), item)
 	if err != nil {
 		ginx.ResFailWithMessage(c, "上传失败")

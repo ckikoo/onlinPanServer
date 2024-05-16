@@ -69,13 +69,13 @@ func (a *WorkOrderApi) Create(c *gin.Context) {
 	title := c.Request.PostFormValue("title")
 
 	if len(content) == 0 || len(title) == 0 {
-		ginx.ResFail(c)
+		ginx.ResFailWithMessage(c, "参数错误")
 		return
 	}
 
 	err := a.Srv.CreateWorkOrder(ctx, contextx.FromUserID(ctx), title, content)
 	if err != nil {
-		ginx.ResFail(c)
+		ginx.ResFailWithMessage(c, err.Error())
 		return
 	}
 

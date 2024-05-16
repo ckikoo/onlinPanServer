@@ -63,12 +63,13 @@ func createLogFile(logFilePath string) *os.File {
 // Log 记录日志
 func Log(level string, message ...interface{}) {
 
+	fmt.Printf("globalLogger: %v\n", globalLogger)
 	str := ""
 
 	for _, v := range message {
 		str += fmt.Sprintf("[ %v ]", v)
 	}
-
+	fmt.Printf("str: %v\n", str)
 	switch level {
 	case "DEBUG":
 		globalLogger.Debug(str)

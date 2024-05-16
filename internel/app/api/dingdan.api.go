@@ -50,7 +50,13 @@ func (api *DingdanApi) Buy(c *gin.Context) {
 
 	id := c.PostForm("id")
 	if id == "" {
-		ginx.ResFail(c)
+		ginx.ResFailWithMessage(c, "参数错误")
+		return
+	}
+	_, err := strconv.Atoi(id)
+	if err != nil {
+		ginx.ResFailWithMessage(c, "参数错误")
+		return
 	}
 
 	_no, err := strconv.Atoi(id)

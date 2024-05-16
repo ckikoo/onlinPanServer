@@ -35,6 +35,16 @@ func (a *AdminLoginAPI) Login(c *gin.Context) {
 		ginx.ResFailWithMessage(c, "验证码错误")
 		return
 	}
+
+	if item.Email == "" {
+		ginx.ResFailWithMessage(c, "账号为空")
+		return
+	}
+	if item.Password == "" {
+		ginx.ResFailWithMessage(c, "密码为空")
+		return
+	}
+
 	user_id, err := a.LoginSrv.Login(ctx, item.Email, item.Password, true)
 
 	if err != nil {

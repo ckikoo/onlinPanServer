@@ -3,14 +3,13 @@ package user
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
-	"onlineCLoud/internel/app/dao/file"
+	"onlineCLoud/internel/app/config"
 	"onlineCLoud/internel/app/dao/redisx"
 	"onlineCLoud/internel/app/dao/util"
 	"onlineCLoud/internel/app/schema"
 	"onlineCLoud/pkg/errors"
-	logger "onlineCLoud/pkg/log"
-	jsonutil "onlineCLoud/pkg/util/json"
 	"time"
 
 	"gorm.io/gorm"
@@ -135,48 +134,110 @@ func (a *UserRepo) SetRedis(ctx context.Context, email string, in string) error 
 	return a.Rd.Set(ctx, email, in, time.Hour*(24))
 
 }
-
 func (a *UserRepo) GetUseSpace(ctx context.Context, email string) map[string]interface{} {
-
-	space, _ := a.Rd.Get(ctx, "user:space:"+email)
+	space, err := a.Rd.Get(ctx, "user:space:"+email)
 	var item UserSpace
-	if space != "" {
-		json.Unmarshal([]byte(space), &item)
-		return item.ToMap()
+	if err == nil {
+		fmt.Printf("space: %v\n", space)
+		if err := json.Unmarshal([]byte(space), &item); err == nil {
+			return item.ToMap()
+		}
+		log.Printf("Failed to unmarshal: %v", err)
 	}
+
 	var useSpace int64
+	res := a.DB.Table("tb_file").Select("SUM(file_size) as space_used").
+		Joins("JOIN tb_user ON tb_user.user_id = tb_file.user_id").
+		Where("tb_user.email = ?", email).Scan(&useSpace)
+	if res.Error != nil {
+		log.Printf("Error querying use space: %v", res.Error)
+		return item.ToMap()
+	}
+	fmt.Printf("useSpace: %v\n", useSpace)
 
-	res := file.GetFileDB(ctx, a.DB).Select("file_size").Joins("JOIN tb_user ON tb_user.user_id = tb_file.user_id AND tb_user.email = ?", email).Count(&useSpace)
-	if res.Error != nil && res.Error != gorm.ErrRecordNotFound {
-		logger.Log("error", res.Error)
+	// Query for total space with COALESCE
+	var totalSpace int64
+	res = a.DB.Table("tb_user u").
+		Select("COALESCE(p.spaceSize, u.total_space) AS space_size").
+		Joins("JOIN tb_vip v ON u.user_id = v.user_id").
+		Joins("JOIN tb_package p ON v.vip_package_id = p.id").
+		Where("? BETWEEN v.active_from AND v.active_until AND u.email = ?", time.Now(), email).
+		Order("COALESCE(p.spaceSize, u.total_space) DESC").
+		Limit(1).
+		Scan(&totalSpace)
+	if res.Error != nil || res.RowsAffected == 0 {
+		log.Printf("Error or no data for total space: %v", res.Error)
 		return item.ToMap()
 	}
 
-	// 加上email
-	err := GetUserDB(ctx, a.DB).Select("").Where(&User{Email: email})
+	if totalSpace <= 10000 {
+		totalSpace *= 1024 * 1024
+	}
+
+	// Set the values and cache them
+	item.TotalSpace = uint64(totalSpace)
+	item.UseSpace = uint64(useSpace)
+	str, _ := json.Marshal(item)
+	err = a.Rd.Set(ctx, "user:space:"+email, str, 24*time.Hour)
 	if err != nil {
-		return item.ToMap()
+		fmt.Println("？", err)
 	}
-
-	str := jsonutil.MarshalToString(item)
-	a.Rd.Set(ctx, "user:space:"+email, str, time.Hour*(24))
+	fmt.Printf("err: %v\n", err)
 	return item.ToMap()
 }
 
 func (a *UserRepo) GetUserSpaceById(ctx context.Context, id string) UserSpace {
-
-	var item User
-
-	err := GetUserDB(ctx, a.DB).Select("use_space ", "total_space").Where(&User{UserID: id}).First(&item).Error
-	if err != nil {
-		return UserSpace{}
+	var item UserSpace
+	var useSpace int64
+	res := a.DB.Table("tb_file").Select("SUM(file_size) as space_used").
+		Joins("JOIN tb_user ON tb_user.user_id = tb_file.user_id").
+		Where("tb_file.user_id = ?", id).Scan(&useSpace)
+	if res.Error != nil {
+		log.Printf("Error querying use space: %v", res.Error)
+		return item
 	}
-	return item.UserSpace
+
+	var totalSpace int64
+	res = a.DB.Table("tb_user u").
+		Select("COALESCE(p.spaceSize, u.total_space) AS space_size").
+		Joins("JOIN tb_vip v ON u.user_id = v.user_id").
+		Joins("JOIN tb_package p ON v.vip_package_id = p.id").
+		Where("? BETWEEN v.active_from AND v.active_until AND u.user_id = ?", time.Now(), id).
+		Order("COALESCE(p.spaceSize, u.total_space) DESC").
+		Limit(1).
+		Scan(&totalSpace)
+	if res.Error != nil || res.RowsAffected == 0 {
+		log.Printf("Error or no data for total space: %v", res.Error)
+		return item
+	}
+
+	item.TotalSpace = uint64(totalSpace)
+	item.UseSpace = uint64(useSpace)
+
+	return item
 }
 
-func (a *UserRepo) UpdateSpace(ctx context.Context, email string, add uint64, update ...bool) error {
-	a.Rd.Delete(ctx, "user:space:"+email)
-	db := GetUserDB(ctx, a.DB).Where("email = ?", email)
+func (a *UserRepo) GetUserSpeed(ctx context.Context, id string) (uint64, error) {
+
+	var totalSpace int64
+	res := a.DB.Table("tb_vip v").
+		Select(fmt.Sprintf("COALESCE(p.speedLimit, %v) AS space_size", config.C.Download.Limit)).
+		Joins("JOIN tb_package p ON v.vip_package_id = p.id").
+		Where("? BETWEEN v.active_from AND v.active_until AND v.user_id = ?", time.Now(), id).
+		Order("p.speedLimit DESC").
+		Limit(1).
+		Scan(&totalSpace)
+	if res.Error != nil {
+		log.Printf("Error or no data for total space: %v", res.Error)
+		return 100, res.Error
+	}
+
+	return uint64(totalSpace), nil
+}
+
+func (a *UserRepo) UpdateSpace(ctx context.Context, uid string, add uint64, update ...bool) error {
+	a.Rd.Delete(ctx, "user:space:"+uid)
+	db := GetUserDB(ctx, a.DB).Where(&User{UserID: uid})
 	if len(update) == 0 {
 		err := db.UpdateColumn("use_space", gorm.Expr("use_space + ?", add)).Error
 		if err != nil {
@@ -188,7 +249,7 @@ func (a *UserRepo) UpdateSpace(ctx context.Context, email string, add uint64, up
 			return err
 		}
 	}
-	a.Rd.Delete(ctx, "user:space:"+email)
+	a.Rd.Delete(ctx, "user:space:"+uid)
 	return nil
 }
 

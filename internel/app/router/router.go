@@ -60,6 +60,7 @@ func (a *Router) RegisterApI(app *gin.Engine) {
 			"/api/resetPwd", "/api/file/download/",
 			"/api/getAvatar",
 			"/api/showShare",
+			"/api/download",
 		)))
 
 	g.Use(middleware.AuthMiddleware(a.Auth, middleware.AllowAdminSkipper("/api/admin"),
