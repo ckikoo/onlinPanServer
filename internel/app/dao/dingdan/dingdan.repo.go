@@ -17,6 +17,7 @@ type dingdan struct {
 	CreatedAt time.Time
 	PackName  string  `gorm:"column:packageName" json:"packageName"`
 	NickName  string  `gorm:"column:nick_name" json:"nick_name"`
+	Email     string  `gorm:"column:email" json:"email"`
 	UserId    string  `gorm:"column:user_id" json:"user_id"`
 	PackageId int     `gorm:"column:package_id" json:"package_id"`
 	Price     float32 `gorm:"column:price" json:"price" form:"price"`
@@ -27,7 +28,7 @@ func (f *DingdanRepo) GetDingdanList(ctx context.Context, pageNo, pageSize int, 
 	temp := make([]dingdan, 0)
 
 	res := db.
-		Select("tb_dingdan.id, tb_dingdan.created_at, tb_package.pageName as packageName, tb_dingdan.user_id as user_id, tb_dingdan.package_id as PackageId, tb_package.price, tb_user.nick_name").
+		Select("tb_dingdan.id, tb_dingdan.created_at, tb_package.pageName as packageName, tb_dingdan.user_id as user_id, tb_dingdan.package_id as PackageId, tb_package.price, tb_user.nick_name,tb_user.email").
 		Joins("left join tb_package on tb_dingdan.package_id = tb_package.id").
 		Joins("left join tb_user on tb_dingdan.user_id = tb_user.user_id").
 		Where("tb_user.nick_name LIKE ?", "%"+uid+"%").

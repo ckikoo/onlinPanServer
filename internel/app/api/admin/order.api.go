@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"fmt"
 	"onlineCLoud/internel/app/ginx"
 	"onlineCLoud/internel/app/service"
 	"onlineCLoud/pkg/contextx"
@@ -17,7 +18,11 @@ func (a *AdminOrderApi) LoadWorkList(c *gin.Context) {
 	ctx := c.Request.Context()
 	pageNo := c.Request.PostFormValue("pageNo")
 	pageSize := c.Request.PostFormValue("pageSize")
-	status := c.DefaultPostForm("status", "*")
+	status := c.PostForm("status")
+	fmt.Printf("status: %v\n", status)
+	if status == "" {
+		status = "*"
+	}
 	if pageNo == "" {
 		pageNo = "1"
 	}
@@ -35,14 +40,32 @@ func (a *AdminOrderApi) LoadWorkList(c *gin.Context) {
 		ginx.ResFail(c)
 		return
 	}
+	fmt.Printf("status: %v\n", status)
+	if status == "1" {
 
-	res, err := a.Srv.LoadWorkListList(ctx, int(PageNo), int(PageSize), "", status)
-	if err != nil {
-		ginx.ResFail(c)
-		return
+		res, err := a.Srv.LoadWorkListList(ctx, int(PageNo), int(PageSize), "", "true")
+		if err != nil {
+			ginx.ResFail(c)
+			return
+		}
+		ginx.ResOkWithData(c, res)
+	} else if status == "0" {
+		res, err := a.Srv.LoadWorkListList(ctx, int(PageNo), int(PageSize), "", "false")
+		if err != nil {
+			ginx.ResFail(c)
+			return
+		}
+		ginx.ResOkWithData(c, res)
+	} else {
+
+		res, err := a.Srv.LoadWorkListList(ctx, int(PageNo), int(PageSize), "", status)
+		if err != nil {
+			ginx.ResFail(c)
+			return
+		}
+		ginx.ResOkWithData(c, res)
 	}
 
-	ginx.ResOkWithData(c, res)
 }
 
 func (a *AdminOrderApi) Update(c *gin.Context) {

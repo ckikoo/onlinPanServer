@@ -76,6 +76,11 @@ func (api *PackageApi) Add(c *gin.Context) {
 		ginx.ResFail(c)
 		return
 	}
+	if Package.ExpireDays == 0 || Package.PageName == "" || Package.Price == 0 {
+		ginx.ResFail(c)
+		return
+	}
+
 	c1, _ := strconv.ParseBool(c.PostForm("show"))
 	Package.Show = c1
 	if err := api.Srv.AddPackage(ctx, Package); err != nil {

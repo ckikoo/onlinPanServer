@@ -158,5 +158,8 @@ func (a *Router) RegisterApI(app *gin.Engine) {
 	g.POST("/vipInfo", a.Vip.GetInfo)
 	g.POST("/admin/vip/loadVipList", a.AdminVip.GetVipList)
 	g.POST("/admin/vip/updateVipTime", a.AdminVip.UpdateTime)
+	g.POST("/admin/vip/add", a.AdminVip.Add)
+	g.POST("/admin/vip/delete", a.AdminVip.Delete)
+
 	g.POST("/admin/dingdan/load", a.Dingdan.GetDingdanList)
 }

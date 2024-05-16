@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"onlineCLoud/internel/app/dao/file"
 	"onlineCLoud/internel/app/dao/redisx"
 	"onlineCLoud/internel/app/dao/util"
 	"onlineCLoud/internel/app/schema"
 	"onlineCLoud/pkg/errors"
+	logger "onlineCLoud/pkg/log"
 	jsonutil "onlineCLoud/pkg/util/json"
 	"time"
 
@@ -135,13 +137,23 @@ func (a *UserRepo) SetRedis(ctx context.Context, email string, in string) error 
 }
 
 func (a *UserRepo) GetUseSpace(ctx context.Context, email string) map[string]interface{} {
+
 	space, _ := a.Rd.Get(ctx, "user:space:"+email)
 	var item UserSpace
 	if space != "" {
 		json.Unmarshal([]byte(space), &item)
 		return item.ToMap()
 	}
-	err := GetUserDB(ctx, a.DB).Select("use_space ", "total_space").Where("email = ?", email).First(&item).Error
+	var useSpace int64
+
+	res := file.GetFileDB(ctx, a.DB).Select("file_size").Joins("JOIN tb_user ON tb_user.user_id = tb_file.user_id AND tb_user.email = ?", email).Count(&useSpace)
+	if res.Error != nil && res.Error != gorm.ErrRecordNotFound {
+		logger.Log("error", res.Error)
+		return item.ToMap()
+	}
+
+	// 加上email
+	err := GetUserDB(ctx, a.DB).Select("").Where(&User{Email: email})
 	if err != nil {
 		return item.ToMap()
 	}

@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"errors"
-	"fmt"
 	"onlineCLoud/internel/app/dao/dingdan"
 	Package "onlineCLoud/internel/app/dao/package"
 	"onlineCLoud/internel/app/dao/vip"
@@ -54,8 +53,6 @@ func (f *DingdanService) Buy(ctx context.Context, uid string, id int) error {
 	if pinfo.Show == false {
 		return errors.New("该套餐已下架")
 	}
-
-	fmt.Printf("pinfo: %+v\n", pinfo)
 
 	f.VipRepo.UpgradeExpireTime(uid, pinfo.ExpireDays)
 	err = f.DingdanRepo.Insert(ctx, dingdan.Dingdan{UserId: uid, PackageId: id})

@@ -66,3 +66,52 @@ func (api *VipAPI) UpdateTime(c *gin.Context) {
 	}
 	ginx.ResOk(c)
 }
+
+func (api *VipAPI) Add(c *gin.Context) {
+
+	ID := c.PostForm("ID")
+	email := c.PostForm("email")
+	ActiveFrom := c.PostForm("ActiveFrom")
+	ActiveUntil := c.PostForm("ActiveUntil")
+	_id, err := strconv.Atoi(ID)
+	if err != nil {
+		ginx.ResFailWithMessage(c, err.Error())
+		return
+	}
+	_from, err := strconv.Atoi(ActiveFrom)
+	if err != nil {
+		ginx.ResFailWithMessage(c, err.Error())
+		return
+	}
+	_util, err := strconv.Atoi(ActiveUntil)
+	if err != nil {
+		ginx.ResFailWithMessage(c, err.Error())
+		return
+	}
+	err = api.VipSrv.AddVip(c, email, _id, _from, _util)
+
+	if err != nil {
+		ginx.ResFailWithMessage(c, err.Error())
+		return
+	}
+	ginx.ResOk(c)
+}
+
+func (api *VipAPI) Delete(c *gin.Context) {
+
+	ID := c.PostForm("ID")
+
+	_id, err := strconv.Atoi(ID)
+	if err != nil {
+		ginx.ResFailWithMessage(c, "参数错误")
+		return
+	}
+
+	err = api.VipSrv.Delete(c, _id)
+
+	if err != nil {
+		ginx.ResFailWithMessage(c, err.Error())
+		return
+	}
+	ginx.ResOk(c)
+}

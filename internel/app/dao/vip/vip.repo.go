@@ -18,7 +18,8 @@ type VipRepo struct {
 }
 type info struct {
 	UserId      string    `gorm:"column:user_id" json:"user_id" form:"user_id"` // 页面名称
-	VipId       int       `gorm:"column:vip_id" json:"vip_id" form:"vip_id"`    // 页面名称
+	VipId       int       `gorm:"column:vip_id" json:"vip_id" form:"vip_id"`    // 会员编号
+	Email       string    `gorm:"column:email" json:"email" form:"email"`       // 邮箱
 	NickName    string    `json:"nickName" form:"nickName" gorm:"column:nick_name;type:varchar(20);index:key_nick_name"`
 	Avatar      string    `json:"avatar" form:"avatar" gorm:"column:avatar;type:varchar(100)"`
 	PageName    string    `gorm:"column:pageName" json:"pageName" form:"pageName"` // 页面名称
@@ -30,7 +31,7 @@ func (a *VipRepo) LoadVipInfoList(ctx context.Context, pageno, pageSize int, uid
 	var list []info
 
 	db := GetVipDb(ctx, a.VipDB).
-		Select("tb_vip.id as vip_id,tb_user.nick_name, tb_user.avatar, tb_package.pageName, tb_vip.user_id, tb_vip.active_from, tb_vip.active_until").
+		Select("tb_vip.id as vip_id,tb_user.nick_name, tb_user.avatar, tb_user.email , tb_package.pageName, tb_vip.user_id, tb_vip.active_from, tb_vip.active_until").
 		Joins("JOIN tb_user ON tb_vip.user_id = tb_user.user_id").
 		Joins("JOIN tb_package ON tb_vip.vip_package_id = tb_package.id").
 		Limit(pageSize).Offset((pageno - 1) * pageSize).
@@ -98,7 +99,6 @@ func (a *VipRepo) UpgradeExpireTime(userID string, days uint32) error {
 		return nil // 确保所有操作成功后返回nil
 	})
 }
-
 func (a *VipRepo) CheckExists(userID string, packid uint) (bool, error) {
 	var item Vip
 	res := GetVipDb(context.Background(), a.VipDB).Where(&Vip{UserID: userID, VipPackageID: packid}).First(&item)
@@ -116,6 +116,24 @@ func (a *VipRepo) CheckExists(userID string, packid uint) (bool, error) {
 
 	// 默认返回false
 	return false, nil
+}
+func (a *VipRepo) GetVipInfoByUserIDAndPackId(userID string, packid uint) (*Vip, error) {
+	var item Vip
+	res := GetVipDb(context.Background(), a.VipDB).Where(&Vip{UserID: userID, VipPackageID: packid}).First(&item)
+	if res.Error != nil {
+		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, res.Error
+	}
+
+	// 如果查询成功且存在记录，则返回true
+	if res.RowsAffected > 0 {
+		return &item, nil
+	}
+
+	// 默认返回false
+	return nil, nil
 }
 
 func (a *VipRepo) GetVipInfoByUserID(userID string) (*vipInfo, error) {
@@ -157,6 +175,19 @@ func (a *VipRepo) UpdateTime(ctx context.Context, id, endTime int, uid string) e
 	db := GetVipDb(ctx, a.VipDB)
 	e := time.Unix(int64(endTime), 0)
 	res := db.Where(&Vip{UserID: uid, Model: gorm.Model{ID: uint(id)}}).Updates(&Vip{ActiveUntil: e})
+	if res.Error != nil {
+		if res.Error != gorm.ErrRecordNotFound {
+			return res.Error
+		}
+
+		return errors.New("记录不存在")
+	}
+	return nil
+}
+func (a *VipRepo) Delete(ctx context.Context, id int) error {
+	db := GetVipDb(ctx, a.VipDB)
+
+	res := db.Where(&Vip{Model: gorm.Model{ID: uint(id)}}).Delete(nil)
 	if res.Error != nil {
 		if res.Error != gorm.ErrRecordNotFound {
 			return res.Error
