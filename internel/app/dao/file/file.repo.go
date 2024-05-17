@@ -49,8 +49,9 @@ func (f *FileRepo) GetFileList(ctx context.Context, uid string, schema *schema.R
 		db = db.Where("user_id=?", uid)
 	}
 
-	db.Order("folder_type desc")
-	db.Order("create_time asc")
+	db = db.Order("folder_type desc")
+	db = db.Order("create_time asc")
+
 	var temp []File
 	err := util.WrapPageQuery(ctx, db, &schema.PageParams, &temp, page)
 

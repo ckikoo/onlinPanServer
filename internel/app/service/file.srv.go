@@ -576,9 +576,18 @@ func (f *FileSrv) GetFolderInfo(ctx context.Context, path string, uid string, se
 	item.FolderType = 1
 	item.Secure = secure
 	item.DelFlag = define.FileFlagInUse
-	res, err := f.Repo.GetFileList(ctx, uid, &item, false)
+	temp, err := f.Repo.GetFileList(ctx, uid, &item, false)
 	if err != nil {
 		return nil, err
+	}
+	var res []file.File
+	for _, path := range paths {
+		for _, v := range temp {
+			if v.FileID == path {
+				res = append(res, v)
+				break
+			}
+		}
 	}
 	return res, nil
 
