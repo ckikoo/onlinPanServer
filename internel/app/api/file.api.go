@@ -147,7 +147,7 @@ func (f *FileApi) GetFolderInfo(c *gin.Context) {
 	ctx := c.Request.Context()
 	path := c.PostForm("path")
 
-	res, err := f.FileSrv.GetFolderInfo(ctx, path, contextx.FromUserID(ctx))
+	res, err := f.FileSrv.GetFolderInfo(ctx, path, contextx.FromUserID(ctx), false)
 
 	if err != nil {
 		ginx.ResFail(c)

@@ -156,7 +156,7 @@ func (f *ShareSrv) GetFolderInfo(ctx context.Context, shareId string, path strin
 
 	fileSrv := FileSrv{Repo: &file.FileRepo{Db: f.Repo.DB}}
 
-	info, err := fileSrv.GetFolderInfo(ctx, path, shareInfo.UserId)
+	info, err := fileSrv.GetFolderInfo(ctx, path, shareInfo.UserId, false)
 	if err != nil {
 		return nil, err
 	}

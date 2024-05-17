@@ -128,6 +128,7 @@ func (a *Router) RegisterApI(app *gin.Engine) {
 	g.POST("/showShare/saveShare", a.WebShareApi.SaveShare)
 
 	// 加密文件
+	g.POST("/enc/getFolderInfo", a.EncAPI.GetFolderInfo)
 	g.POST("/enc/addFile", a.EncAPI.AddFile)
 	g.POST("/enc/initEncPassword", a.EncAPI.InitPassword)
 	g.POST("/enc/checkPassword", a.EncAPI.CheckPassword)

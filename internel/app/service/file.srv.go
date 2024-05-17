@@ -569,11 +569,12 @@ func (f *FileSrv) GetFile(ctx context.Context, fid string, uid string) ([]byte, 
 	}
 }
 
-func (f *FileSrv) GetFolderInfo(ctx context.Context, path string, uid string) ([]file.File, error) {
+func (f *FileSrv) GetFolderInfo(ctx context.Context, path string, uid string, secure bool) ([]file.File, error) {
 	paths := strings.Split(path, "/")
 	var item schema.RequestFileListPage
 	item.Path = paths
 	item.FolderType = 1
+	item.Secure = secure
 	item.DelFlag = define.FileFlagInUse
 	res, err := f.Repo.GetFileList(ctx, uid, &item, false)
 	if err != nil {
@@ -833,7 +834,6 @@ func (srv *FileSrv) UpdateFileSecure(ctx context.Context, uid string, fileid str
 		}
 	}
 
-	FileIDList = append(FileIDList, fileids...)
 	fmt.Printf("FileIDList: %v\n", FileIDList)
 	for _, id := range FileIDList {
 		info, err := srv.Repo.GetFileInfo(ctx, id, uid)
@@ -847,10 +847,21 @@ func (srv *FileSrv) UpdateFileSecure(ctx context.Context, uid string, fileid str
 			info.JoinTime = ""
 		}
 		info.Secure = status
-		info.FilePid = "0"
 		srv.Repo.UpdateFile(ctx, info)
-
 	}
+
+	for _, info := range fileInfoList {
+
+		if status {
+			info.JoinTime = time.Now().Format("2006-01-02 15:04:05")
+		} else {
+			info.JoinTime = ""
+		}
+		info.Secure = status
+		info.FilePid = "0"
+		srv.Repo.UpdateFile(ctx, &info)
+	}
+
 	return nil
 
 }

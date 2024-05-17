@@ -254,3 +254,17 @@ func (api *EncAPI) ChangeFileFolder(c *gin.Context) {
 	}
 	ginx.ResOk(c)
 }
+
+func (f *EncAPI) GetFolderInfo(c *gin.Context) {
+	ctx := c.Request.Context()
+	path := c.PostForm("path")
+
+	res, err := f.FileSrv.GetFolderInfo(ctx, path, contextx.FromUserID(ctx), true)
+
+	if err != nil {
+		ginx.ResFail(c)
+		return
+	}
+	ginx.ResOkWithData(c, res)
+
+}
