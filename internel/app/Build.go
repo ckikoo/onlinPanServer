@@ -112,9 +112,10 @@ func BuildInjector() (*Injector, func(), error) {
 	}
 
 	WebShareApi := api.WebShareApi{
-		UserSrv:  &userSrv,
-		ShareSrv: &ShareSrv,
-		FileSrv:  &FileSrv,
+		UserSrv:     &userSrv,
+		ShareSrv:    &ShareSrv,
+		FileSrv:     &FileSrv,
+		DownLoadSrv: &downloadSrv,
 	}
 
 	work := api.WorkOrderApi{

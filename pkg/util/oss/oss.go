@@ -72,13 +72,64 @@ func (oss *OssClient) Get(filepath string) (io.ReadCloser, error) {
 	return rc, nil
 }
 
-// 删除当前目录,以及子目录
-func (cleint *OssClient) DeleteDir(dir string) error {
+// DeleteDir 删除指定目录或文件
+func (client *OssClient) DeleteDir(dirOrFile string) error {
+	isFile := false
 
+	// 检查是文件还是目录
+	lor, err := client.bucket.ListObjects(oss.Prefix(dirOrFile), oss.Delimiter("/"))
+	if err != nil {
+		return err
+	}
+	if len(lor.Objects) == 0 && len(lor.CommonPrefixes) == 0 {
+		// 没有列出任何对象，可能是文件
+		isFile = true
+		lor, err = client.bucket.ListObjects(oss.Prefix(dirOrFile))
+		if err != nil {
+			return err
+		}
+		if len(lor.Objects) == 0 {
+			return errors.New("文件或目录不存在")
+		}
+	}
+
+	if isFile {
+		// 删除文件
+		err := deleteObjects(client, []string{dirOrFile})
+		if err != nil {
+			return err
+		}
+		fmt.Println("文件删除成功")
+	} else {
+		// 递归删除目录
+		err := deleteDirectory(client, dirOrFile)
+		if err != nil {
+			return err
+		}
+		fmt.Println("目录及其内容删除成功")
+	}
+
+	return nil
+}
+
+// deleteObjects 批量删除对象
+func deleteObjects(client *OssClient, keys []string) error {
+	delRes, err := client.bucket.DeleteObjects(keys)
+	if err != nil {
+		return err
+	}
+	if len(delRes.DeletedObjects) > 0 {
+		fmt.Println("这些对象未能成功删除:", delRes.DeletedObjects)
+		return errors.New("文件删除不完全")
+	}
+	return nil
+}
+
+// deleteDirectory 递归删除目录
+func deleteDirectory(client *OssClient, dir string) error {
 	marker := oss.Marker("")
-	objectsDeleted := 0
 	for {
-		lor, err := cleint.bucket.ListObjects(marker, oss.Prefix(dir))
+		lor, err := client.bucket.ListObjects(marker, oss.Prefix(dir))
 		if err != nil {
 			return err
 		}
@@ -88,23 +139,15 @@ func (cleint *OssClient) DeleteDir(dir string) error {
 			keys = append(keys, object.Key)
 		}
 
-		delRes, err := cleint.bucket.DeleteObjects(keys)
+		err = deleteObjects(client, keys)
 		if err != nil {
 			return err
 		}
 
-		if len(delRes.DeletedObjects) > 0 {
-			fmt.Println("These objects were not deleted successfully:", delRes.DeletedObjects)
-			return errors.New("文件删除不完全")
-		}
-
-		objectsDeleted += len(keys)
-
-		marker = oss.Marker(lor.NextMarker)
 		if !lor.IsTruncated {
 			break
 		}
+		marker = oss.Marker(lor.NextMarker)
 	}
-
 	return nil
 }

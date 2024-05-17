@@ -16,7 +16,7 @@ MaxReqLoggerLength = 1024
 
 [File]
 # 默认给用户100M空间 100*1024*1024  字节 ---》 因为申请空间都是以字节为单位
-InitSpaceSize = 107374182400
+InitSpaceSize = 104857600
 FileUploadDir = "upload"
 
 

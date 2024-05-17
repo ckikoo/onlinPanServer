@@ -397,13 +397,11 @@ func (f *FileSrv) DelFiles(ctx context.Context, uid string, fileId string, secur
 		if len(temp) > 0 {
 
 			for _, fid := range temp {
-				go func() {
-					timer.GetInstance().Add(fmt.Sprintf(define.RecycleDelTimerKey, contextx.FromUserID(ctx)+fid), time.Now().Add(time.Hour*24*7), func() {
-						srv := RecycleSrv{Repo: f.Repo}
-						srv.DelFiles(ctx, contextx.FromUserID(ctx), fid)
-
-					})
-				}()
+				uid := contextx.FromUserID(ctx)
+				timer.GetInstance().Add(fmt.Sprintf(define.RecycleDelTimerKey, contextx.FromUserID(ctx), fid), time.Now().Add(time.Hour*24*10), func() {
+					srv := RecycleSrv{Repo: f.Repo}
+					srv.DelFiles(ctx, uid, fid)
+				})
 			}
 
 			delFileList = append(delFileList, temp...)
