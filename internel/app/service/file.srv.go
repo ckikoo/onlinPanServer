@@ -350,6 +350,25 @@ func (f *FileSrv) findAllSubFolderFileIdList(ctx context.Context, fileIdList *[]
 		f.findAllSubFolderFileIdList(ctx, fileIdList, userID, v.FileID, delflag, secure)
 	}
 }
+func (f *FileSrv) findAllSubFileIdList(ctx context.Context, fileIdList *[]string, userID, fileID string, delflag int8, secure bool) {
+	*fileIdList = append(*fileIdList, fileID)
+
+	query := schema.RequestFileListPage{
+		FilePid: fileID,
+		DelFlag: delflag,
+		Secure:  secure,
+	}
+
+	fields, err := f.Repo.GetFileList(ctx, userID, &query, false)
+
+	if err != nil || fields == nil || len(fields) == 0 {
+		return
+	}
+
+	for _, v := range fields {
+		f.findAllSubFolderFileIdList(ctx, fileIdList, userID, v.FileID, delflag, secure)
+	}
+}
 
 // 删除文件
 func (f *FileSrv) DelFiles(ctx context.Context, uid string, fileId string, secure bool) error {
@@ -401,6 +420,57 @@ func (f *FileSrv) DelFiles(ctx context.Context, uid string, fileId string, secur
 		}
 	}
 	err := f.Repo.UpdateFileDelFlag(ctx, uid, nil, fileIds, define.FileFlagInUse, define.FileFlagInRecycleBin, time.Now().Format("2006-01-02 15:04:05"))
+	if err != nil {
+		logger.Log("WARN", contextx.FromUserID(ctx), err.Error())
+		return err
+	}
+
+	return nil
+}
+
+// 删除文件
+func (f *FileSrv) DelFilesWithSecure(ctx context.Context, uid string, fileId string) error {
+	fileIds := strings.Split(fileId, ",")
+
+	// 查询文件信息
+	query := schema.RequestFileListPage{
+		Path:    fileIds,
+		DelFlag: define.FileFlagInUse,
+		Secure:  true,
+	}
+
+	// 查找目录
+	fileInfoList, _ := f.Repo.GetFileList(ctx, uid, &query, false)
+	if fileInfoList == nil || len(fileInfoList) == 0 {
+		logger.Log("WARN", contextx.FromUserID(ctx), "请求查询不存在文件")
+		return errors.New("请求错误")
+	}
+
+	delFileList := make([]string, 0)
+
+	// 查找二级下所有文件
+	for _, e := range fileInfoList {
+		temp := make([]string, 0)
+		f.findAllSubFolderFileIdList(ctx, &temp, uid, e.FileID, define.FileFlagInUse, true)
+		if len(temp) > 0 {
+			delFileList = append(delFileList, temp...)
+		}
+	}
+	delFileList = append(delFileList, fileIds...)
+	// 删除物理文件
+
+	for _, e := range delFileList {
+		info, err := f.Repo.GetFileInfo(ctx, e, uid)
+		if err != nil {
+			continue
+		}
+		if info.FileMd5 != "" {
+			c := cache.NewCacheReader(config.C.File.FileUploadDir + "/" + info.FileMd5)
+			c.Delete()
+		}
+	}
+
+	err := f.Repo.DelFiles(ctx, uid, delFileList)
 	if err != nil {
 		logger.Log("WARN", contextx.FromUserID(ctx), err.Error())
 		return err
@@ -735,14 +805,14 @@ func (srv *FileSrv) CancelUpload(ctx context.Context, uid string, fileid string)
 	return os.RemoveAll(path)
 }
 
-// 文件加入密码箱
+// 文件加入密码箱  // 最后状态
 func (srv *FileSrv) UpdateFileSecure(ctx context.Context, uid string, fileid string, status bool) error {
 	fileids := strings.Split(fileid, ",")
 
 	query := schema.RequestFileListPage{
 		Path:    fileids,
 		DelFlag: define.FileFlagInUse,
-		Secure:  true,
+		Secure:  !status,
 	}
 
 	fileInfoList, err := srv.Repo.GetFileList(ctx, uid, &query, false)
@@ -759,17 +829,30 @@ func (srv *FileSrv) UpdateFileSecure(ctx context.Context, uid string, fileid str
 	FileIDList := make([]string, 0)
 	for _, fileinfo := range fileInfoList {
 		if fileinfo.FolderType == 1 {
-			srv.findAllSubFolderFileIdList(ctx, &FileIDList, uid, fileinfo.FileID, define.FileFlagSoftDeleted, status)
+			srv.findAllSubFileIdList(ctx, &FileIDList, uid, fileinfo.FileID, define.FileFlagInUse, !status)
 		}
 	}
 
 	FileIDList = append(FileIDList, fileids...)
+	fmt.Printf("FileIDList: %v\n", FileIDList)
+	for _, id := range FileIDList {
+		info, err := srv.Repo.GetFileInfo(ctx, id, uid)
+		if err != nil {
+			continue
+		}
 
-	if err := srv.Repo.UpdateFileSecure(ctx, uid, fileids, status); err != nil {
-		return err
+		if status {
+			info.JoinTime = time.Now().Format("2006-01-02 15:04:05")
+		} else {
+			info.JoinTime = ""
+		}
+		info.Secure = status
+		info.FilePid = "0"
+		srv.Repo.UpdateFile(ctx, info)
+
 	}
+	return nil
 
-	return srv.ChangeFileToRoot(ctx, uid, fileInfoList)
 }
 
 func (srv *FileSrv) GetFileListTotalSize(ctx context.Context, uid string, fileid []string) (uint64, error) {

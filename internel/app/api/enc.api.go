@@ -168,7 +168,7 @@ func (api *EncAPI) DelFile(c *gin.Context) {
 	}
 	ctx := c.Request.Context()
 	fileids := c.PostForm("fileIds")
-	err := api.FileSrv.DelFiles(c, contextx.FromUserID(ctx), fileids, true)
+	err := api.FileSrv.DelFilesWithSecure(c, contextx.FromUserID(ctx), fileids)
 	if err != nil {
 		fmt.Printf("err: %v\n", err)
 		ginx.ResFailWithMessage(c, "删除失败")
@@ -186,7 +186,7 @@ func (api *EncAPI) RecoverFile(c *gin.Context) {
 	}
 
 	fileIds := c.PostForm("fileIds")
-
+	fmt.Printf("fileIds: %v\n", fileIds)
 	err := api.FileSrv.UpdateFileSecure(ctx, contextx.FromUserID(ctx), fileIds, false) // 修改文件状态
 	if err != nil {
 		ginx.ResFailWithMessage(c, err.Error())

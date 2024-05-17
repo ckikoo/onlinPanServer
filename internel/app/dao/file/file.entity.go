@@ -30,8 +30,35 @@ type File struct {
 	LastUpdateTime string `json:"lastUpdateTime" form:"lastUpdateTime" gorm:"column:last_update_time"`                    //上一次访问时间
 	RecoveryTime   string `json:"recoveryTime" form:"recoveryTime" gorm:"column:recovery_time"`                           //进入回收站时间
 	Secure         bool
+	JoinTime       string `json:"join_time" form:"join_time" gorm:"column:join_time"` //进入回收站时间
 }
 
+func FileToMap(file File) map[string]interface{} {
+	fileMap := make(map[string]interface{})
+	fileMap["file_id"] = file.FileID
+	fileMap["user_id"] = file.UserID
+	fileMap["folder_type"] = int(file.FolderType)
+	fileMap["file_type"] = int(file.FileType)
+	fileMap["file_category"] = int(file.FileCategory)
+	fileMap["status"] = int(file.Status)
+	fileMap["del_flag"] = int(file.DelFlag)
+	fileMap["file_size"] = file.FileSize
+	fileMap["file_md5"] = file.FileMd5
+	fileMap["file_pid"] = file.FilePid
+	fileMap["file_name"] = file.FileName
+	fileMap["file_cover"] = file.FileCover
+	fileMap["file_path"] = file.FilePath
+
+	// 将时间转换为字符串格式
+	fileMap["create_time"] = file.CreateTime
+	fileMap["last_update_time"] = file.LastUpdateTime
+	fileMap["recovery_time"] = file.RecoveryTime
+
+	fileMap["secure"] = file.Secure
+	fileMap["join_time"] = file.JoinTime
+
+	return fileMap
+}
 func ToMd5Map(files []File) map[string]interface{} {
 	md5Map := make(map[string]interface{})
 

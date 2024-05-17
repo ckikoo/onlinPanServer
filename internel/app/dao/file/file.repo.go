@@ -224,8 +224,8 @@ func (f *FileRepo) FileRename(ctx context.Context, uid string, fileId string, fi
 
 func (f *FileRepo) UpdateFile(ctx context.Context, file *File) error {
 	db := GetFileDB(ctx, f.Db)
-
-	return db.Where("user_id=?", file.UserID).Where("file_id=?", file.FileID).UpdateColumns(file).Error
+	mf := FileToMap(*file)
+	return db.Where("user_id=?", file.UserID).Where("file_id=?", file.FileID).UpdateColumns(mf).Error
 }
 
 func (f *FileRepo) UpdateFileDelFlag(ctx context.Context, UserID string, filePids []string, fileIds []string, oldFlag, newFlag int8, reTime string) error {
