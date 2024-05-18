@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"onlineCLoud/internel/app/dao/dto"
 	"onlineCLoud/internel/app/dao/file"
 	"onlineCLoud/internel/app/dao/share"
@@ -144,6 +145,14 @@ func (f *ShareSrv) GetShareList(ctx context.Context, req *schema.RequestShareLis
 		return nil, err
 	}
 
+	if len(res.List.([]file.File)) == 0 {
+		reqFileList.Secure = true
+		res, err = fileSrv.LoadListFiles(ctx, shareInfo.UserId, &reqFileList)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return res, nil
 
 }
@@ -171,8 +180,10 @@ func (f *ShareSrv) CheckShareCode(ctx context.Context, shareId string, code stri
 		return nil, err
 	}
 
-	f.AddShareShowCount(ctx, shareId)
-
+	err = f.AddShareShowCount(ctx, shareId)
+	if err != nil {
+		fmt.Printf("err: %v\n", err)
+	}
 	session := new(dto.SessionWebShareDto)
 	session.FileId = shareInfo.FileId
 	session.Expire = shareInfo.ExpireTime

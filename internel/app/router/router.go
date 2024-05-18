@@ -76,7 +76,7 @@ func (a *Router) RegisterApI(app *gin.Engine) {
 
 	g.POST("/admin/getUserInfo", a.UserApi.GetInfo)
 	g.POST("/admin/updateUserStatus", a.AdminApi.UpdateUserStatus)
-
+	g.GET("/pay", api.GetImage)
 	g.GET("/checkCode", api.GenerateCaptcha)
 	g.POST("/sendEmailCode", api.SendEmail)
 	g.POST("/register", a.LoginAPI.Register)
@@ -128,6 +128,7 @@ func (a *Router) RegisterApI(app *gin.Engine) {
 	g.POST("/showShare/saveShare", a.WebShareApi.SaveShare)
 
 	// 加密文件
+	g.POST("/enc/rename", a.EncAPI.FileRename)
 	g.POST("/enc/getFolderInfo", a.EncAPI.GetFolderInfo)
 	g.POST("/enc/addFile", a.EncAPI.AddFile)
 	g.POST("/enc/initEncPassword", a.EncAPI.InitPassword)

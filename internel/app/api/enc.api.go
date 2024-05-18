@@ -53,6 +53,7 @@ func (api *EncAPI) InitPassword(c *gin.Context) {
 		return
 	}
 
+	fmt.Printf("pass: %v\n", pass)
 	err := api.EncSrv.InitPassWord(ctx, contextx.FromUserEmail(ctx), pass)
 	if err != nil {
 		ginx.ResFailWithMessage(c, err.Error())
@@ -74,6 +75,7 @@ func (api *EncAPI) CheckPassword(c *gin.Context) {
 		return
 	}
 
+	fmt.Printf("pass: %v\n", pass)
 	f, err := api.EncSrv.CheckPassword(ctx, contextx.FromUserEmail(ctx), pass)
 	if err != nil {
 		ginx.ResFailWithMessage(c, err.Error())
@@ -266,5 +268,28 @@ func (f *EncAPI) GetFolderInfo(c *gin.Context) {
 		return
 	}
 	ginx.ResOkWithData(c, res)
+
+}
+func (f *EncAPI) FileRename(c *gin.Context) {
+	ctx := c.Request.Context()
+	fileId := c.PostForm("fileId")
+	filePId := c.PostForm("filePid")
+	fileName := c.PostForm("fileName")
+
+	if fileName == "" {
+		ginx.ResFailWithMessage(c, "文件名不能为空")
+		return
+	}
+	if fileId == "" || filePId == "" {
+		ginx.ResFail(c)
+		return
+	}
+	file, err := f.FileSrv.FileRename(ctx, contextx.FromUserID(ctx), fileId, filePId, fileName)
+	if err != nil || file == nil {
+		ginx.ResFail(c)
+		return
+	}
+
+	ginx.ResOkWithData(c, file)
 
 }

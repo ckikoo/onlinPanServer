@@ -2,7 +2,6 @@ package user
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"onlineCLoud/internel/app/config"
@@ -135,15 +134,15 @@ func (a *UserRepo) SetRedis(ctx context.Context, email string, in string) error 
 
 }
 func (a *UserRepo) GetUseSpace(ctx context.Context, email string) map[string]interface{} {
-	space, err := a.Rd.Get(ctx, "user:space:"+email)
+	// space, err := a.Rd.Get(ctx, "user:space:"+email)
 	var item UserSpace
-	if err == nil {
-		fmt.Printf("space: %v\n", space)
-		if err := json.Unmarshal([]byte(space), &item); err == nil {
-			return item.ToMap()
-		}
-		log.Printf("Failed to unmarshal: %v", err)
-	}
+	// if err == nil {
+	// 	fmt.Printf("space: %v\n", space)
+	// 	if err := json.Unmarshal([]byte(space), &item); err == nil {
+	// 		return item.ToMap()
+	// 	}
+	// 	log.Printf("Failed to unmarshal: %v", err)
+	// }
 
 	var useSpace int64
 	res := a.DB.Table("tb_file").Select("SUM(file_size) as space_used").
@@ -177,12 +176,12 @@ func (a *UserRepo) GetUseSpace(ctx context.Context, email string) map[string]int
 	// Set the values and cache them
 	item.TotalSpace = uint64(totalSpace)
 	item.UseSpace = uint64(useSpace)
-	str, _ := json.Marshal(item)
-	err = a.Rd.Set(ctx, "user:space:"+email, str, 24*time.Hour)
-	if err != nil {
-		fmt.Println("？", err)
-	}
-	fmt.Printf("err: %v\n", err)
+	// str, _ := json.Marshal(item)
+	// err = a.Rd.Set(ctx, "user:space:"+email, str, 24*time.Hour)
+	// if err != nil {
+	// 	fmt.Println("？", err)
+	// }
+	// fmt.Printf("err: %v\n", err)
 	return item.ToMap()
 }
 

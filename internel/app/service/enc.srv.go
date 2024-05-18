@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"onlineCLoud/internel/app/dao/enc"
 	"onlineCLoud/internel/app/dao/user"
 	"time"
@@ -23,6 +24,9 @@ func (srv *EncSrv) CheckPassword(ctx context.Context, email string, password str
 		return false, err
 	}
 
+	fmt.Printf("user.EncPassWord: %v\n", user.EncPassWord)
+	fmt.Printf("password: %v\n", password)
+	fmt.Printf("(user.EncPassWord == password): %v\n", (user.EncPassWord == password))
 	return user.EncPassWord == password, nil
 }
 
@@ -36,9 +40,9 @@ func (srv *EncSrv) EnFilePass(ctx context.Context, userId string, fileid string)
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
+
 func (srv *EncSrv) CheckFileEnc(ctx context.Context, userId string, fileid string, password string) (bool, error) {
 
 	err := srv.Repo.AddFile(ctx, &enc.Enc{
