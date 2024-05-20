@@ -96,7 +96,7 @@ Port = 23560
 # 用户名
 User = "root"
 # 密码
-Password = "U2FsdGVkX1sc"
+Password = ""
 # 数据库
 DBName = "NetCloud"
 # 连接参数

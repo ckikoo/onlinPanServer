@@ -53,7 +53,7 @@ func (f *DingdanService) Buy(ctx context.Context, uid string, id int) error {
 		return errors.New("该套餐已下架")
 	}
 
-	f.VipRepo.UpgradeExpireTime(uid, pinfo.ExpireDays)
+	f.VipRepo.UpgradeExpireTime(uid, pinfo.ExpireDays, uint32(id))
 	err = f.DingdanRepo.Insert(ctx, dingdan.Dingdan{UserId: uid, PackageId: id})
 	if err != nil {
 		return err

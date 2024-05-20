@@ -63,9 +63,7 @@ func (a *UserSrv) GetUserSpaceById(ctx context.Context, id string) user.UserSpac
 	return a.UserRepo.GetUserSpaceById(ctx, id)
 
 }
-func (a *UserSrv) UpdateSpace(ctx context.Context, email string, add uint64) error {
-	return a.UserRepo.UpdateSpace(ctx, email, add)
-}
+
 func (a *UserSrv) UpdatePassword(ctx context.Context, email string, old, New string) error {
 	var user user.User
 	err := a.UserRepo.FindOneByName(ctx, email, &user)

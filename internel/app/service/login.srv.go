@@ -4,11 +4,9 @@ import (
 	"context"
 	"fmt"
 	"onlineCLoud/internel/app/config"
-	"onlineCLoud/internel/app/dao/redisx"
 	"onlineCLoud/internel/app/dao/user"
 	"onlineCLoud/pkg/auth"
 	"onlineCLoud/pkg/errors"
-	"onlineCLoud/pkg/util/json"
 	"onlineCLoud/pkg/util/uuid"
 	"time"
 )
@@ -40,16 +38,6 @@ func (a *LoginSrv) Login(ctx context.Context, username, password string, isadmin
 		return "", errors.New("用户非管理员权限")
 	}
 
-	m := make(map[string]interface{}, 0)
-	m["totalSpace"] = item.TotalSpace
-	m["useSpace"] = item.UseSpace
-
-	v := json.MarshalToString(m)
-	rd := redisx.NewClient()
-	err = rd.Set(ctx, "user:space:"+username, v, time.Duration(10)*time.Minute)
-	if err != nil {
-		return "", err
-	}
 	item.LastJoinTime = time.Now()
 	err = a.UserRepo.Update(ctx, item.UserID, item)
 

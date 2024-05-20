@@ -28,9 +28,8 @@ type File struct {
 	FilePath       string `json:"filePath"   form:"filePath" gorm:"column:file_path;type:varchar(255)"`                   // 文件路径
 	CreateTime     string `json:"createTime"   form:"createTime" gorm:"column:create_time"`                               //创建时间
 	LastUpdateTime string `json:"lastUpdateTime" form:"lastUpdateTime" gorm:"column:last_update_time"`                    //上一次访问时间
-	RecoveryTime   string `json:"recoveryTime" form:"recoveryTime" gorm:"column:recovery_time"`                           //进入回收站时间
 	Secure         bool
-	JoinTime       string `json:"join_time" form:"join_time" gorm:"column:join_time"` //进入回收站时间
+	JoinTime       string `json:"join_time" form:"join_time" gorm:"column:join_time"` // 加入密码箱时间
 }
 
 func FileToMap(file File) map[string]interface{} {
@@ -52,7 +51,6 @@ func FileToMap(file File) map[string]interface{} {
 	// 将时间转换为字符串格式
 	fileMap["create_time"] = file.CreateTime
 	fileMap["last_update_time"] = file.LastUpdateTime
-	fileMap["recovery_time"] = file.RecoveryTime
 
 	fileMap["secure"] = file.Secure
 	fileMap["join_time"] = file.JoinTime

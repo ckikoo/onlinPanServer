@@ -76,6 +76,7 @@ func (srv *FileSrv) UploadFile(c *gin.Context, uid string, fileinfo schema.FileU
 	var space user.UserSpace
 	json.Unmarshal([]byte(s), &space)
 
+	fmt.Printf("space: %v\n", space)
 	if space.UseSpace+uint64(fileinfo.FileSize) > space.TotalSpace {
 		logger.Log("INFO", "用户上传文件超过剩余大小")
 		statusMap["status"] = "fail"
@@ -106,13 +107,12 @@ func (srv *FileSrv) UploadFile(c *gin.Context, uid string, fileinfo schema.FileU
 			file.DelFlag = define.FileFlagInUse
 			file.Status = define.FileStatusUsing // 成功过
 			file.FilePid = fileinfo.FilePid
-			file.RecoveryTime = ""
+
 			file.UserID = uid
 			if err := srv.Repo.UploadFile(c, file); err != nil {
 				logger.Log("WARN", contextx.FromUserID(c.Request.Context()), err.Error())
 				return nil, err
 			}
-			usrv.UpdateSpace(c, contextx.FromUserEmail(c.Request.Context()), file.FileSize)
 
 			statusMap["fileId"] = file.FileID
 			statusMap["status"] = FILE_STATUS_USING
@@ -200,7 +200,6 @@ func (srv *FileSrv) UploadFile(c *gin.Context, uid string, fileinfo schema.FileU
 		ext := fileUtil.GetFileExt(file.FileName)
 		file.FileType = define.GetFileType(ext)
 		file.FileCategory = define.FileCategoryStr4ID(ext)
-		usrv.UpdateSpace(c.Request.Context(), contextx.FromUserEmail(c.Request.Context()), file.FileSize)
 		if file.FileType == define.FileTypeVideo {
 			//视频切片
 			CutFile4Video(fileid, file.FilePath)
@@ -317,7 +316,6 @@ func (f *FileSrv) NewFoloder(ctx context.Context, uid string, filePid, fileName 
 		FilePid:        filePid,
 		CreateTime:     now,
 		LastUpdateTime: now,
-		RecoveryTime:   "",
 		Status:         define.FileStatusUsing,
 		DelFlag:        define.FileFlagInUse,
 		Secure:         secure,
@@ -1023,7 +1021,6 @@ func (f *FileSrv) ChangeFileToRoot(ctx context.Context, uid string, fileInfoList
 		}
 		file.FilePid = "0"
 		file.LastUpdateTime = time.Now().Format("2006-01-02 15:04:05")
-		file.RecoveryTime = ""
 		file.DelFlag = define.FileFlagInUse
 		f.Repo.UpdateFile(ctx, &file)
 	}

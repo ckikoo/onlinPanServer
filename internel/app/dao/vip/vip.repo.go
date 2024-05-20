@@ -81,10 +81,10 @@ func (a *VipRepo) Insert(ctx context.Context, in *Vip) error {
 	return GetVipDb(ctx, a.VipDB).Create(in).Error
 }
 
-func (a *VipRepo) UpgradeExpireTime(userID string, days uint32) error {
+func (a *VipRepo) UpgradeExpireTime(userID string, days uint32, id uint32) error {
 	return a.VipDB.Transaction(func(tx *gorm.DB) error {
 		currentMemberships := make([]Vip, 0)
-		result := tx.Where("user_id = ? AND active_until > ?", userID, time.Now()).Order("active_until desc").Find(&currentMemberships)
+		result := tx.Where("user_id = ? AND active_until > ? and vip_package_id != ?", userID, time.Now(), id).Order("active_until desc").Find(&currentMemberships)
 		if result.Error != nil {
 			return result.Error // 直接返回错误
 		}

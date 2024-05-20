@@ -11,11 +11,11 @@ import (
 	workOrder "onlineCLoud/internel/app/dao/gongdan"
 	"onlineCLoud/internel/app/dao/mailx"
 	Package "onlineCLoud/internel/app/dao/package"
+	"onlineCLoud/internel/app/dao/recycle"
 	"onlineCLoud/internel/app/dao/redisx"
 	"onlineCLoud/internel/app/dao/share"
 	"onlineCLoud/internel/app/dao/user"
 	"onlineCLoud/internel/app/dao/vip"
-	"onlineCLoud/internel/app/define"
 	"onlineCLoud/internel/app/router"
 	"onlineCLoud/internel/app/schema"
 	"onlineCLoud/internel/app/service"
@@ -88,7 +88,8 @@ func BuildInjector() (*Injector, func(), error) {
 	}
 
 	RecycleSrv := service.RecycleSrv{
-		Repo: &fileRepo,
+		Repo:        &fileRepo,
+		RecycleRepo: &recycle.RecycleRepo{DB: db},
 	}
 	recycleApi := api.RecycleApi{
 		RecycleSrv: &RecycleSrv,
@@ -197,7 +198,8 @@ func BuildInjector() (*Injector, func(), error) {
 
 	// 对回收站定时删除
 	go func() {
-		list, _ := fileRepo.GetFileList(context.Background(), "*", &schema.RequestFileListPage{DelFlag: define.FileFlagInRecycleBin}, false)
+
+		list, _ := RecycleSrv.RecycleRepo.GetFileList(context.Background(), "*", schema.PageParams{PageNo: 1, PageSize: -1}, false)
 		for _, file := range list {
 			joinTime, _ := time.Parse("2006-01-02 15:04:05", file.RecoveryTime)
 			EndTime := joinTime.Add(time.Hour * 24 * 10)

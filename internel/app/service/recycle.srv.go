@@ -4,9 +4,8 @@ import (
 	"context"
 	"fmt"
 	"onlineCLoud/internel/app/dao/file"
-	"onlineCLoud/internel/app/dao/redisx"
+	"onlineCLoud/internel/app/dao/recycle"
 	"onlineCLoud/internel/app/dao/share"
-	"onlineCLoud/internel/app/dao/user"
 	"onlineCLoud/internel/app/define"
 	"onlineCLoud/internel/app/schema"
 	"onlineCLoud/pkg/cache"
@@ -21,7 +20,8 @@ import (
 )
 
 type RecycleSrv struct {
-	Repo *file.FileRepo
+	Repo        *file.FileRepo
+	RecycleRepo *recycle.RecycleRepo
 }
 
 func (f *RecycleSrv) LoadListFiles(ctx context.Context, uid string, pageNo, pageSize int64) (*schema.ListResult, error) {
@@ -30,13 +30,12 @@ func (f *RecycleSrv) LoadListFiles(ctx context.Context, uid string, pageNo, page
 	var p schema.RequestFileListPage
 	p.PageNo = int(pageNo)
 	p.PageSize = int(pageSize)
-	p.DelFlag = define.FileFlagInRecycleBin
-	p.OrderBy = "recovery_time desc"
-	files, err := f.Repo.GetFileList(ctx, uid, &p, true)
+
+	files, err := f.RecycleRepo.GetFileList(ctx, uid, p.PageParams, true)
 	if err != nil {
 		return nil, err
 	}
-	total, err := f.Repo.GetFileListTotal(ctx, uid, &p)
+	total, err := f.RecycleRepo.GetFileListTotal(ctx, uid)
 	if err != nil {
 		return nil, err
 	}
@@ -94,6 +93,7 @@ func (f *RecycleSrv) DelFiles(ctx context.Context, uid string, fileId string) er
 		Path:    fileIds,
 		DelFlag: define.FileFlagInRecycleBin,
 	}
+
 	fileInfoList, _ := f.Repo.GetFileList(ctx, uid, &query, false)
 	if fileInfoList == nil || len(fileInfoList) == 0 {
 		return nil
@@ -131,7 +131,10 @@ func (f *RecycleSrv) DelFiles(ctx context.Context, uid string, fileId string) er
 	if err := f.Repo.DelFiles(ctx, uid, delFileList); err != nil {
 		return err
 	}
-	f.delfileToUpdateSpace(ctx, uid)
+
+	for _, id := range fileIds {
+		f.RecycleRepo.Delete(ctx, uid, id)
+	}
 
 	// 删除物理文件
 	for item := range Md5Set.Iter() {
@@ -150,19 +153,6 @@ func (f *RecycleSrv) DelFiles(ctx context.Context, uid string, fileId string) er
 	}
 
 	return nil
-}
-
-func (f *RecycleSrv) delfileToUpdateSpace(ctx context.Context, userid string) {
-	// 跟新空间状态
-	urv := UserSrv{UserRepo: &user.UserRepo{DB: f.Repo.Db, Rd: redisx.NewClient()}}
-
-	var total uint64
-	err := f.Repo.GetTotalUseSpace(ctx, userid, &total)
-	if err != nil {
-		logger.Log("WARN", err.Error())
-		return
-	}
-	urv.UserRepo.UpdateSpace(ctx, userid, total, true)
 }
 
 // 回复文件
@@ -226,7 +216,6 @@ func (f *RecycleSrv) RecoverFile(ctx context.Context, uid string, fileIds string
 		}
 		file.FilePid = "0"
 		file.LastUpdateTime = time.Now().Format("2006-01-02 15:04:05")
-		file.RecoveryTime = ""
 		file.DelFlag = define.FileFlagInUse
 		f.Repo.UpdateFile(ctx, &file)
 	}

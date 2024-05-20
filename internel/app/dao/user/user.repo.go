@@ -156,19 +156,25 @@ func (a *UserRepo) GetUseSpace(ctx context.Context, email string) map[string]int
 
 	// Query for total space with COALESCE
 	var totalSpace int64
-	res = a.DB.Table("tb_user u").
-		Select("COALESCE(p.spaceSize, u.total_space) AS space_size").
-		Joins("JOIN tb_vip v ON u.user_id = v.user_id").
-		Joins("JOIN tb_package p ON v.vip_package_id = p.id").
-		Where("? BETWEEN v.active_from AND v.active_until AND u.email = ?", time.Now(), email).
-		Order("COALESCE(p.spaceSize, u.total_space) DESC").
-		Limit(1).
-		Scan(&totalSpace)
+	res = a.DB.Raw(`SELECT 
+    COALESCE(p.spaceSize, u.total_space) AS space_size 
+FROM 
+    tb_user u 
+JOIN 
+    tb_vip v ON u.user_id = v.user_id 
+JOIN 
+    tb_package p ON v.vip_package_id = p.id 
+WHERE 
+    ? BETWEEN v.active_from AND v.active_until 
+    AND u.email = ? 
+ORDER BY 
+    COALESCE(p.spaceSize, u.total_space) DESC 
+LIMIT 1;`, time.Now(), email).Scan(&totalSpace)
 	if res.Error != nil || res.RowsAffected == 0 {
 		log.Printf("Error or no data for total space: %v", res.Error)
 		return item.ToMap()
 	}
-
+	fmt.Printf("totalSpace: %v\n", totalSpace)
 	if totalSpace <= 10000 {
 		totalSpace *= 1024 * 1024
 	}
@@ -232,24 +238,6 @@ func (a *UserRepo) GetUserSpeed(ctx context.Context, id string) (uint64, error) 
 	}
 
 	return uint64(totalSpace), nil
-}
-
-func (a *UserRepo) UpdateSpace(ctx context.Context, uid string, add uint64, update ...bool) error {
-	a.Rd.Delete(ctx, "user:space:"+uid)
-	db := GetUserDB(ctx, a.DB).Where(&User{UserID: uid})
-	if len(update) == 0 {
-		err := db.UpdateColumn("use_space", gorm.Expr("use_space + ?", add)).Error
-		if err != nil {
-			return err
-		}
-	} else {
-		err := db.UpdateColumn("use_space", add).Error
-		if err != nil {
-			return err
-		}
-	}
-	a.Rd.Delete(ctx, "user:space:"+uid)
-	return nil
 }
 
 func (a *UserRepo) UpdateEncPassword(ctx context.Context, email string, password string) error {

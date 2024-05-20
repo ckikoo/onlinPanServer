@@ -85,7 +85,8 @@ func (srv *VipSrv) AddVip(ctx context.Context, email string, _id, _from, _util i
 
 	days := (_util - _from) / 60 / 60 / 24
 
-	err = srv.VipRepo.UpgradeExpireTime(user.UserID, uint32(days))
+	// 修改
+	err = srv.VipRepo.UpgradeExpireTime(user.UserID, uint32(days), uint32(_id))
 	if err != nil {
 		return errors.New("修改失败")
 	}

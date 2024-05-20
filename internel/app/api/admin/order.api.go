@@ -56,13 +56,6 @@ func (a *AdminOrderApi) LoadWorkList(c *gin.Context) {
 			return
 		}
 		ginx.ResOkWithData(c, res)
-	} else if status == "1" {
-		res, err := a.Srv.LoadWorkListList(ctx, int(PageNo), int(PageSize), "", "true")
-		if err != nil {
-			ginx.ResFail(c)
-			return
-		}
-		ginx.ResOkWithData(c, res)
 	} else {
 		res, err := a.Srv.LoadWorkListList(ctx, int(PageNo), int(PageSize), "", status)
 		if err != nil {
