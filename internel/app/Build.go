@@ -1,7 +1,6 @@
 package app
 
 import (
-	"context"
 	"onlineCLoud/internel/app/api"
 	"onlineCLoud/internel/app/api/admin"
 	"onlineCLoud/internel/app/dao/dingdan"
@@ -17,11 +16,9 @@ import (
 	"onlineCLoud/internel/app/dao/user"
 	"onlineCLoud/internel/app/dao/vip"
 	"onlineCLoud/internel/app/router"
-	"onlineCLoud/internel/app/schema"
 	"onlineCLoud/internel/app/service"
 	logger "onlineCLoud/pkg/log"
 	"onlineCLoud/pkg/timer"
-	"time"
 )
 
 func BuildInjector() (*Injector, func(), error) {
@@ -199,14 +196,14 @@ func BuildInjector() (*Injector, func(), error) {
 	// 对回收站定时删除
 	go func() {
 
-		list, _ := RecycleSrv.RecycleRepo.GetFileList(context.Background(), "*", schema.PageParams{PageNo: 1, PageSize: -1}, false)
-		for _, file := range list {
-			joinTime, _ := time.Parse("2006-01-02 15:04:05", file.RecoveryTime)
-			EndTime := joinTime.Add(time.Hour * 24 * 10)
-			timer.Add("file_"+file.FileID+file.UserID, EndTime, func() {
-				RecycleSrv.DelFiles(context.Background(), file.UserID, file.FileID)
-			})
-		}
+		// list, _ := RecycleSrv.RecycleRepo.GetFileList(context.Background(), "*", schema.PageParams{PageNo: 1, PageSize: -1}, false)
+		// for _, file := range list {
+		// 	joinTime, _ := time.Parse("2006-01-02 15:04:05", file.RecoveryTime)
+		// 	EndTime := joinTime.Add(time.Hour * 24 * 10)
+		// 	timer.Add("file_"+file.FileID+file.UserID, EndTime, func() {
+		// 		RecycleSrv.DelFiles(context.Background(), file.UserID, file.FileID)
+		// 	})
+		// }
 
 	}()
 

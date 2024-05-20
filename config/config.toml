@@ -22,9 +22,9 @@ FileUploadDir = "upload"
 
 [Email]
 Port = "25"
-Host = "smtp.163.com"
-UserName = "lj_5683@163.com"
-Password = "BGCFWYIIDGATRQLO"
+Host = ""
+UserName = ""
+Password = ""
 
 [Captcha]
 # 数字长度
@@ -40,9 +40,9 @@ Height = 30
 
 
 [Redis]
-Addr = "ljcctv.bf:23561"
+Addr = ""
 # 密码
-Password = "U2FsdGVkX1sc"
+Password = ""
 
 
 
@@ -83,9 +83,9 @@ EnableAutoMigrate = true
 
 [OSS]
 Host = "oss-cn-fuzhou.aliyuncs.com"
-OssAccessKeyID = "LTAI5t8ApTY8CGGRSkhazaSb"
-OssAccessKeySecret = "gOo3v7a7H5W6CmmoAo3UxisBdwK5LK"
-Bucket = "online-pan"
+OssAccessKeyID = ""
+OssAccessKeySecret = ""
+Bucket = ""
 
 
 [MySQL]

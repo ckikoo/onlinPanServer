@@ -8,6 +8,7 @@ import (
 	"onlineCLoud/internel/app/dao/file"
 	workOrder "onlineCLoud/internel/app/dao/gongdan"
 	Package "onlineCLoud/internel/app/dao/package"
+	"onlineCLoud/internel/app/dao/recycle"
 	"onlineCLoud/internel/app/dao/share"
 	"onlineCLoud/internel/app/dao/vip"
 	"os/user"
@@ -31,6 +32,7 @@ func AutoMigrate(db *gorm.DB) error {
 		new(Package.Package),
 		new(dingdan.Dingdan),
 		new(vip.Vip),
+		new(recycle.Recycle),
 	)
 
 	return err
