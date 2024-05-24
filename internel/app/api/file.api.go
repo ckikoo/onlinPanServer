@@ -223,7 +223,7 @@ func (f *FileApi) CreateDownloadUrl(c *gin.Context) {
 
 	fid := c.Param("fid")
 	file, err := f.FileSrv.GetFileInfo(ctx, fid, contextx.FromUserID(ctx))
-	if err != nil || file == nil || file.CreateTime == "" || file.FolderType == 1 {
+	if err != nil || file == nil || file.CreateTime.IsZero() || file.FolderType == 1 {
 		ginx.ResJson(c, 400, "", "操作错误", "fail")
 		return
 	}

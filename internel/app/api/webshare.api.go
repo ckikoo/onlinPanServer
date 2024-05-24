@@ -205,7 +205,7 @@ func (api *WebShareApi) CreateDownloadUrl(c *gin.Context) {
 	}
 
 	file, err := api.FileSrv.GetFileInfo(ctx, fileId, session.ShareUserId)
-	if err != nil || file == nil || file.CreateTime == "" || file.FolderType == 1 {
+	if err != nil || file == nil || file.CreateTime.IsZero() || file.FolderType == 1 {
 		ginx.ResJson(c, 600, "", "操作错误", "fail")
 		return
 	}

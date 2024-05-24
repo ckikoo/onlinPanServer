@@ -215,7 +215,7 @@ func (f *RecycleSrv) RecoverFile(ctx context.Context, uid string, fileIds string
 			file.FileName = fileUtil.Rename(file.FileName)
 		}
 		file.FilePid = "0"
-		file.LastUpdateTime = time.Now().Format("2006-01-02 15:04:05")
+		file.LastUpdateTime = time.Now()
 		file.DelFlag = define.FileFlagInUse
 		f.Repo.UpdateFile(ctx, &file)
 	}

@@ -40,7 +40,7 @@ Height = 30
 
 
 [Redis]
-Addr = ""
+Addr = "localhost:23561"
 # 密码
 Password = ""
 

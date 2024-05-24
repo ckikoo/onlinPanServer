@@ -101,8 +101,8 @@ func (srv *FileSrv) UploadFile(c *gin.Context, uid string, fileinfo schema.FileU
 
 		if file != nil && file.FileMd5 != "" {
 			file.FileName = fileUtil.Rename(fileinfo.FileName)
-			file.CreateTime = time.Now().Format("2006-01-02 15:04:05")
-			file.LastUpdateTime = time.Now().Format("2006-01-02 15:04:05")
+			file.CreateTime = time.Now()
+			file.LastUpdateTime = time.Now()
 			file.FileID = util.MustString()
 			file.DelFlag = define.FileFlagInUse
 			file.Status = define.FileStatusUsing // 成功过
@@ -192,8 +192,8 @@ func (srv *FileSrv) UploadFile(c *gin.Context, uid string, fileinfo schema.FileU
 		file.FileMd5 = fileinfo.FileMd5
 		file.FilePath = uploadFile
 		file.DelFlag = define.FileFlagInUse
-		file.CreateTime = time.Now().Format("2006-01-02 15:04:05")
-		file.LastUpdateTime = time.Now().Format("2006-01-02 15:04:05")
+		file.CreateTime = time.Now()
+		file.LastUpdateTime = time.Now()
 		file.Status = define.FileStatusUsing
 		file.FilePid = fileinfo.FilePid
 		file.FolderType = 0
@@ -308,7 +308,7 @@ func (f *FileSrv) NewFoloder(ctx context.Context, uid string, filePid, fileName 
 		logger.Log("WARN", "用户请求创建文件已经存在")
 		return nil, errors.New("文件已经存在")
 	}
-	now := time.Now().Format("2006-01-02 15:04:05")
+	now := time.Now()
 	file := file.File{
 		FileID: uuid.MustString(),
 		UserID: uid, FolderType: 1,
@@ -606,7 +606,7 @@ func (f *FileSrv) FileRename(ctx context.Context, uid, fileID, filePid, fileName
 		return nil, err
 	}
 
-	if file == nil || file.CreateTime == "" {
+	if file == nil || file.CreateTime.IsZero() {
 		return nil, err
 	}
 
@@ -618,12 +618,12 @@ func (f *FileSrv) FileRename(ctx context.Context, uid, fileID, filePid, fileName
 		return nil, err
 	}
 
-	if tmp != nil && tmp.CreateTime != "" {
+	if tmp != nil && !tmp.CreateTime.IsZero() {
 		return nil, errors.New("文件存在")
 	}
 
 	file.FileName = fileName
-	file.LastUpdateTime = time.Now().Format("2006-01-02 15:04:05")
+	file.LastUpdateTime = time.Now()
 
 	err = f.Repo.UpdateFile(ctx, file)
 	if err != nil {
@@ -757,8 +757,8 @@ func (f *FileSrv) SaveShare(ctx context.Context,
 	}
 
 	fileList := make([]file.File, 0)
-	currentTime := time.Now().Format("2006-01-02 15:04:05") // 获取当前的时间
-	for _, info := range shareFileList {                    // 便利分享的文件列表
+	currentTime := time.Now()
+	for _, info := range shareFileList { // 便利分享的文件列表
 		if _, ok := currentFileMap[info.FileName]; ok { //  检查对应的文件名是否存在
 			fileNewName := fileUtil.Rename(info.FileName) // 文件重命令
 			info.FileName = fileNewName
@@ -776,7 +776,7 @@ func (f *FileSrv) SaveShare(ctx context.Context,
 }
 
 // 找出当前分享文件下
-func (f *FileSrv) findAllSubFileListAndChange(ctx context.Context, copyFileList *[]file.File, fileInfo file.File, sourceUserId, currentUserID, curentTime string, newFilePid string) {
+func (f *FileSrv) findAllSubFileListAndChange(ctx context.Context, copyFileList *[]file.File, fileInfo file.File, sourceUserId string, currentUserID string, curentTime time.Time, newFilePid string) {
 
 	// 修改文件信息
 	sourceFileId := fileInfo.FileID
@@ -847,9 +847,9 @@ func (srv *FileSrv) UpdateFileSecure(ctx context.Context, uid string, fileid str
 		}
 
 		if status {
-			info.JoinTime = time.Now().Format("2006-01-02 15:04:05")
+			info.JoinTime = time.Now()
 		} else {
-			info.JoinTime = ""
+			info.JoinTime = time.Time{}
 		}
 		info.Secure = status
 		srv.Repo.UpdateFile(ctx, info)
@@ -858,9 +858,9 @@ func (srv *FileSrv) UpdateFileSecure(ctx context.Context, uid string, fileid str
 	for _, info := range fileInfoList {
 
 		if status {
-			info.JoinTime = time.Now().Format("2006-01-02 15:04:05")
+			info.JoinTime = time.Now()
 		} else {
-			info.JoinTime = ""
+			info.JoinTime = time.Time{}
 		}
 		info.Secure = status
 		info.FilePid = "0"
@@ -1020,7 +1020,7 @@ func (f *FileSrv) ChangeFileToRoot(ctx context.Context, uid string, fileInfoList
 			file.FileName = fileUtil.Rename(file.FileName)
 		}
 		file.FilePid = "0"
-		file.LastUpdateTime = time.Now().Format("2006-01-02 15:04:05")
+		file.LastUpdateTime = time.Now()
 		file.DelFlag = define.FileFlagInUse
 		f.Repo.UpdateFile(ctx, &file)
 	}
